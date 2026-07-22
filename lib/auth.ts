@@ -1,12 +1,35 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
+import Resend from 'next-auth/providers/resend'
 import { db } from '@/db/client'
 import { createOrUpdateUser } from '@/lib/data/users'
+import { verificationTokens } from '@/db/schema'
+import { eq, and } from 'drizzle-orm'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Google,
+    Resend({
+      from: process.env.AUTH_RESEND_FROM ?? 'LeafScore <noreply@tea-ratings.com>',
+    }),
   ],
+  adapter: {
+    async createVerificationToken(data) {
+      await db.insert(verificationTokens).values(data)
+      return data
+    },
+    async useVerificationToken({ identifier, token }) {
+      const [row] = await db
+        .select()
+        .from(verificationTokens)
+        .where(and(eq(verificationTokens.identifier, identifier), eq(verificationTokens.token, token)))
+      if (!row) return null
+      await db
+        .delete(verificationTokens)
+        .where(and(eq(verificationTokens.identifier, identifier), eq(verificationTokens.token, token)))
+      return row
+    },
+  },
   callbacks: {
     async signIn({ user }) {
       if (!user.email) return false

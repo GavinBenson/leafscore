@@ -53,7 +53,7 @@ export function SignInButton() {
   return (
     <button
       className="btn btn-ghost btn-sm"
-      onClick={() => signIn('google')}
+      onClick={() => signIn()}
     >
       Sign in
     </button>

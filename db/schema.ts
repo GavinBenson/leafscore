@@ -100,6 +100,14 @@ export const teaRequests = pgTable('tea_requests', {
   createdAt: timestamp('created_at').defaultNow(),
 })
 
+export const verificationTokens = pgTable('verification_tokens', {
+  identifier: text('identifier').notNull(),
+  token: text('token').notNull().unique(),
+  expires: timestamp('expires').notNull(),
+}, (table) => [
+  uniqueIndex('verification_tokens_identifier_token_idx').on(table.identifier, table.token),
+])
+
 export const affiliateLinks = pgTable('affiliate_links', {
   id: serial('id').primaryKey(),
   teaId: integer('tea_id').notNull().references(() => teas.id),
