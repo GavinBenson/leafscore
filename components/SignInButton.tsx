@@ -37,6 +37,9 @@ export function SignInButton() {
         <span style={{ fontSize: 14, fontWeight: 500 }}>
           {session.user.name}
         </span>
+        <a href="/settings" className="btn btn-ghost btn-sm">
+          Settings
+        </a>
         <button
           className="btn btn-ghost btn-sm"
           onClick={() => signOut()}
