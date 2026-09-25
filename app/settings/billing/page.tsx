@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/session'
+import { signInPath } from '@/lib/authRedirect'
 import { PLANS } from '@/lib/stripe'
 import { SubscribeButton } from '@/components/SubscribeButton'
 
@@ -13,7 +14,7 @@ export default async function BillingPage({
   searchParams: Promise<{ success?: string }>
 }) {
   const user = await getCurrentUser()
-  if (!user) redirect('/api/auth/signin')
+  if (!user) redirect(signInPath('/settings/billing'))
 
   const { success } = await searchParams
 

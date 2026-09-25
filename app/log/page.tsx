@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/session'
+import { signInPath } from '@/lib/authRedirect'
 import { db } from '@/db/client'
 import { getTea } from '@/lib/data/teas'
 import { listFlavorTags } from '@/lib/data/flavorTags'
@@ -14,10 +15,10 @@ export default async function LogPage({
 }: {
   searchParams: Promise<{ tea?: string }>
 }) {
-  const user = await getCurrentUser()
-  if (!user) redirect('/api/auth/signin')
-
   const params = await searchParams
+  const user = await getCurrentUser()
+  if (!user) redirect(signInPath(params.tea ? `/log?tea=${encodeURIComponent(params.tea)}` : '/log'))
+
   let tea: { id: number; name: string } | null = null
 
   if (params.tea) {
