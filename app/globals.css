@@ -398,3 +398,161 @@ body {
     font-size: 26px;
   }
 }
+
+/* ─── Sign in ─── */
+.btn-outline {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line-strong);
+}
+
+.btn-outline:hover {
+  background: var(--color-surface-2);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.signin-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.signin-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 20px;
+}
+
+.signin-card:hover {
+  box-shadow: var(--shadow-sm);
+  transform: none;
+}
+
+.signin-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.signin-brand .brand-mark {
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+  border-radius: var(--radius-md);
+}
+
+.signin-title {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin: 0 0 4px;
+}
+
+.signin-intro {
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+.signin-banner {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-clay) 12%, transparent);
+  color: var(--color-clay);
+  font-size: 14px;
+}
+
+.signin-methods .btn {
+  width: 100%;
+}
+
+.signin-google {
+  gap: 10px;
+}
+
+.signin-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--color-ink-3);
+  font-size: 13px;
+}
+
+.signin-divider::before,
+.signin-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-line);
+}
+
+.signin-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.signin-error {
+  margin: 6px 0 0;
+  color: var(--color-clay);
+  font-size: 13px;
+}
+
+.field[aria-invalid="true"] {
+  border-color: var(--color-clay);
+}
+
+.signin-submit {
+  margin-top: 12px;
+}
+
+.signin-sent {
+  text-align: center;
+}
+
+.signin-sent-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  font-size: 22px;
+}
+
+.signin-heading {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.signin-sent strong {
+  color: var(--color-ink);
+}
+
+.signin-fineprint {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.signin-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -1,0 +1,89 @@
+'use client'
+
+import { useActionState, useState } from 'react'
+import { useFormStatus } from 'react-dom'
+import { signInWithEmail, signInWithGoogle, type EmailSignInState } from '@/actions/auth'
+
+function GoogleButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button type="submit" className="btn btn-outline signin-google" disabled={pending}>
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+        <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+      </svg>
+      {pending ? 'Redirecting…' : 'Continue with Google'}
+    </button>
+  )
+}
+
+export function SignInForm({ callbackUrl }: { callbackUrl: string }) {
+  const [state, emailAction, pending] = useActionState<EmailSignInState, FormData>(
+    signInWithEmail,
+    { status: 'idle' },
+  )
+  // Remember which "sent" result was dismissed so a new send shows the notice again.
+  const [dismissed, setDismissed] = useState<EmailSignInState | null>(null)
+
+  if (state.status === 'sent' && dismissed !== state) {
+    return (
+      <div className="signin-sent" role="status">
+        <div className="signin-sent-icon" aria-hidden="true">✉</div>
+        <h2 className="signin-heading">Check your email</h2>
+        <p className="subtle">
+          We sent a sign-in link to <strong>{state.email}</strong>. It expires in 24 hours.
+        </p>
+        <p className="subtle signin-fineprint">
+          Not there? Check spam, or{' '}
+          <button type="button" className="signin-link" onClick={() => setDismissed(state)}>
+            use a different email
+          </button>
+          .
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="signin-methods">
+      <form action={signInWithGoogle}>
+        <input type="hidden" name="callbackUrl" value={callbackUrl} />
+        <GoogleButton />
+      </form>
+
+      <div className="signin-divider">
+        <span>or</span>
+      </div>
+
+      <form action={emailAction} noValidate>
+        <input type="hidden" name="callbackUrl" value={callbackUrl} />
+        <label htmlFor="signin-email" className="signin-label">
+          Email
+        </label>
+        <input
+          id="signin-email"
+          name="email"
+          type="email"
+          className="field"
+          placeholder="you@example.com"
+          autoComplete="email"
+          inputMode="email"
+          defaultValue={state.email}
+          aria-invalid={state.status === 'error'}
+          aria-describedby={state.status === 'error' ? 'signin-email-error' : undefined}
+          required
+        />
+        {state.status === 'error' && (
+          <p id="signin-email-error" className="signin-error" role="alert">
+            {state.message}
+          </p>
+        )}
+        <button type="submit" className="btn btn-primary signin-submit" disabled={pending}>
+          {pending ? 'Sending link…' : 'Email me a sign-in link'}
+        </button>
+      </form>
+    </div>
+  )
+}

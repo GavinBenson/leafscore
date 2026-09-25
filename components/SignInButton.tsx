@@ -1,9 +1,13 @@
 'use client'
 
-import { useSession, signIn, signOut } from 'next-auth/react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
+import { signInPath } from '@/lib/authRedirect'
 
 export function SignInButton() {
   const { data: session } = useSession()
+  const pathname = usePathname()
 
   if (session?.user) {
     return (
@@ -50,12 +54,11 @@ export function SignInButton() {
     )
   }
 
+  if (pathname === '/signin') return null
+
   return (
-    <button
-      className="btn btn-ghost btn-sm"
-      onClick={() => signIn()}
-    >
+    <Link href={signInPath(pathname)} className="btn btn-ghost btn-sm">
       Sign in
-    </button>
+    </Link>
   )
 }
