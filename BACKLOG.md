@@ -69,10 +69,12 @@ Reviews can only be created or deleted.
 
 **Done:** Edit page at `/reviews/[id]/edit` reusing `ReviewForm`, with Edit and Delete controls on the Journal and tea pages. Only the author sees them; anyone else gets a 404. Saving recomputes `leafScore`. Also gave `removeReview` the UI it never had, and Journal cards now name the tea instead of saying Anonymous.
 
-## PBI 6 — Review photos · P2 · New
+## PBI 6 — Review photos · P2 · Done
 
 `reviews.photo_url` column and `BLOB_READ_WRITE_TOKEN` exist, but no upload UI and `@vercel/blob` is unused.
 - Upload on review form (size/type limits), show on `ReviewCard`.
+
+**Done:** Upload on the review form with a 4MB limit; JPEG, PNG and WebP only, checked from the file's bytes. Photos show on `ReviewCard`, and replacing or removing one, or deleting its review, also deletes the old blob. Tested locally against a fake Blob API, not real Vercel Blob. Production needs `BLOB_READ_WRITE_TOKEN` set.
 
 ## PBI 7 — Define what Premium unlocks · P2 · New
 

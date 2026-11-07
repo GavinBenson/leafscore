@@ -4,14 +4,34 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db } from '@/db/client'
 import { listFlavorTags } from '@/lib/data/flavorTags'
-import { createReview, deleteReview, findRecentDuplicateReview, updateReview } from '@/lib/data/reviews'
+import { deleteReviewPhoto, uploadReviewPhoto } from '@/lib/photos'
+import {
+  createReview,
+  deleteReview,
+  findRecentDuplicateReview,
+  getReview,
+  updateReview,
+} from '@/lib/data/reviews'
 import { getTea } from '@/lib/data/teas'
 import { getCurrentUser } from '@/lib/session'
+import { checkPhoto, type PhotoType } from '@/lib/validation/photo'
 import { parseReviewForm, type ReviewFieldErrors } from '@/lib/validation/review'
 
 export type ReviewFormState = {
   message?: string
   fieldErrors?: ReviewFieldErrors
+}
+
+const PHOTO_UPLOAD_FAILED = "We couldn't upload your photo. Try again, or save without it."
+
+async function readPhoto(
+  formData: FormData,
+): Promise<{ file: File; type: PhotoType } | { error: string } | null> {
+  const file = formData.get('photo')
+  // Browsers send an empty File when nothing was chosen.
+  if (!(file instanceof File) || file.size === 0) return null
+  const checked = await checkPhoto(file)
+  return checked.ok ? { file, type: checked.type } : { error: checked.message }
 }
 
 export async function submitReview(
@@ -24,8 +44,16 @@ export async function submitReview(
   }
 
   const parsed = parseReviewForm(formData)
-  if (!parsed.ok) {
-    return { message: 'Check the highlighted fields.', fieldErrors: parsed.errors }
+  const photo = await readPhoto(formData)
+  const photoError = photo && 'error' in photo ? photo.error : undefined
+  if (!parsed.ok || photoError) {
+    return {
+      message: 'Check the highlighted fields.',
+      fieldErrors: {
+        ...(parsed.ok ? {} : parsed.errors),
+        ...(photoError ? { photo: photoError } : {}),
+      },
+    }
   }
   const { tagIds, ...review } = parsed.data
 
@@ -48,7 +76,16 @@ export async function submitReview(
       notes: review.notes,
     })
     if (!duplicate) {
-      await createReview(db, { ...review, userId: user.id }, tagIds)
+      let photoUrl: string | null = null
+      if (photo && 'file' in photo) {
+        try {
+          photoUrl = await uploadReviewPhoto(photo.file, photo.type, user.id)
+        } catch (error) {
+          console.error('uploadReviewPhoto failed', error)
+          return { fieldErrors: { photo: PHOTO_UPLOAD_FAILED } }
+        }
+      }
+      await createReview(db, { ...review, photoUrl, userId: user.id }, tagIds)
     }
   } catch (error) {
     console.error('submitReview failed', error)
@@ -56,6 +93,7 @@ export async function submitReview(
   }
 
   revalidatePath('/browse/' + review.teaId)
+  revalidatePath('/journal')
   redirect('/browse/' + review.teaId)
 }
 
@@ -74,14 +112,28 @@ export async function saveReviewEdit(
   }
 
   const parsed = parseReviewForm(formData)
-  if (!parsed.ok) {
-    return { message: 'Check the highlighted fields.', fieldErrors: parsed.errors }
+  const photo = await readPhoto(formData)
+  const photoError = photo && 'error' in photo ? photo.error : undefined
+  if (!parsed.ok || photoError) {
+    return {
+      message: 'Check the highlighted fields.',
+      fieldErrors: {
+        ...(parsed.ok ? {} : parsed.errors),
+        ...(photoError ? { photo: photoError } : {}),
+      },
+    }
   }
   // teaId is deliberately dropped: an edit can't move a review to another tea.
   const { tagIds, teaId: _teaId, ...changes } = parsed.data
 
   let teaId: number
+  let oldPhotoToDelete: string | null = null
   try {
+    const existing = await getReview(db, reviewId)
+    if (!existing || existing.userId !== user.id) {
+      return { message: "We couldn't find that review." }
+    }
+
     if (tagIds.length > 0) {
       const known = new Set((await listFlavorTags(db)).map((tag) => tag.id))
       if (tagIds.some((id) => !known.has(id))) {
@@ -89,13 +141,28 @@ export async function saveReviewEdit(
       }
     }
 
-    const updated = await updateReview(db, reviewId, user.id, changes, tagIds)
+    let photoUrl = existing.photoUrl
+    if (photo && 'file' in photo) {
+      try {
+        photoUrl = await uploadReviewPhoto(photo.file, photo.type, user.id)
+      } catch (error) {
+        console.error('uploadReviewPhoto failed', error)
+        return { fieldErrors: { photo: PHOTO_UPLOAD_FAILED } }
+      }
+    } else if (formData.get('removePhoto') === 'true') {
+      photoUrl = null
+    }
+    if (photoUrl !== existing.photoUrl) oldPhotoToDelete = existing.photoUrl
+
+    const updated = await updateReview(db, reviewId, user.id, { ...changes, photoUrl }, tagIds)
     if (!updated) return { message: "We couldn't find that review." }
     teaId = updated.teaId
   } catch (error) {
     console.error('saveReviewEdit failed', error)
     return { message: "We couldn't save your review. Try again in a moment." }
   }
+
+  await deleteReviewPhoto(oldPhotoToDelete)
 
   revalidatePath('/browse/' + teaId)
   revalidatePath('/journal')
@@ -106,7 +173,8 @@ export async function removeReview(reviewId: number, teaId: number) {
   const user = await getCurrentUser()
   if (!user) throw new Error('Unauthorized')
 
-  await deleteReview(db, reviewId, user.id)
+  const deleted = await deleteReview(db, reviewId, user.id)
+  await deleteReviewPhoto(deleted?.photoUrl)
 
   revalidatePath('/browse/' + teaId)
   revalidatePath('/journal')

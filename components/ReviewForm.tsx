@@ -1,9 +1,11 @@
 'use client'
 
+import Image from 'next/image'
 import { startTransition, useActionState, useState, type FormEvent } from 'react'
 import type { FlavorTag } from '@/db/schema'
 import { TeaSearch } from '@/components/TeaSearch'
 import { saveReviewEdit, submitReview, type ReviewFormState } from '@/actions/reviews'
+import { MAX_PHOTO_BYTES, PHOTO_ACCEPT, PHOTO_TOO_LARGE } from '@/lib/validation/photo'
 import { MAX_NOTES_LENGTH, MAX_STEEP_SECONDS } from '@/lib/validation/review'
 
 type Props = {
@@ -19,6 +21,7 @@ type Props = {
     notes: string | null
     wouldDrinkAgain: boolean | null
     tagIds: number[]
+    photoUrl: string | null
   }
 }
 
@@ -48,12 +51,14 @@ export function ReviewForm({ tea: initialTea, flavorTags, review }: Props) {
     new Set(review?.tagIds ?? []),
   )
   const [wouldDrinkAgain, setWouldDrinkAgain] = useState(review?.wouldDrinkAgain ?? true)
+  const [photoTooLarge, setPhotoTooLarge] = useState(false)
 
   // Submitting through a transition rather than <form action> skips React's
   // automatic form reset, so a validation error doesn't wipe what was typed.
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (isPending) return
+    // An oversized body would be refused before the action could explain why.
+    if (isPending || photoTooLarge) return
     const formData = new FormData(event.currentTarget)
     startTransition(() => formAction(formData))
   }
@@ -250,6 +255,51 @@ export function ReviewForm({ tea: initialTea, flavorTags, review }: Props) {
         <FieldError message={errors.notes} />
       </div>
 
+      {/* Photo */}
+      <div style={{ marginBottom: 24 }}>
+        <label
+          htmlFor="review-photo"
+          style={{
+            display: 'block',
+            fontSize: 14,
+            fontWeight: 600,
+            marginBottom: 6,
+          }}
+        >
+          Photo (optional, up to 4MB)
+        </label>
+        {review?.photoUrl && (
+          <div style={{ marginBottom: 8 }}>
+            <Image
+              src={review.photoUrl}
+              alt="Current review photo"
+              width={160}
+              height={120}
+              style={{ width: 160, height: 120, objectFit: 'cover', borderRadius: 'var(--radius-md)' }}
+            />
+            <label
+              style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginTop: 4 }}
+            >
+              <input type="checkbox" name="removePhoto" value="true" />
+              Remove this photo
+            </label>
+          </div>
+        )}
+        <input
+          id="review-photo"
+          type="file"
+          name="photo"
+          accept={PHOTO_ACCEPT}
+          aria-invalid={Boolean(errors.photo) || photoTooLarge}
+          style={{ display: 'block', maxWidth: '100%', fontSize: 14 }}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            setPhotoTooLarge(Boolean(file && file.size > MAX_PHOTO_BYTES))
+          }}
+        />
+        <FieldError message={photoTooLarge ? PHOTO_TOO_LARGE : errors.photo} />
+      </div>
+
       {/* Would drink again */}
       <div style={{ marginBottom: 24 }}>
         <label
@@ -323,7 +373,7 @@ export function ReviewForm({ tea: initialTea, flavorTags, review }: Props) {
       <button
         type="submit"
         className="btn btn-primary"
-        disabled={!selectedTea || isPending}
+        disabled={!selectedTea || isPending || photoTooLarge}
         aria-busy={isPending}
       >
         {isPending ? 'Saving...' : review ? 'Save Changes' : 'Submit Review'}

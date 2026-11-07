@@ -50,6 +50,7 @@ export default async function EditReviewPage({
             notes: review.notes,
             wouldDrinkAgain: review.wouldDrinkAgain,
             tagIds: review.tags.map((tag) => tag.id),
+            photoUrl: review.photoUrl,
           }}
         />
       </div>

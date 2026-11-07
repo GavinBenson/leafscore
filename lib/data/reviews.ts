@@ -114,7 +114,7 @@ export async function updateReview(
   db: Db,
   reviewId: number,
   userId: number,
-  data: Pick<NewReview, 'score' | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'wouldDrinkAgain'>,
+  data: Pick<NewReview, 'score' | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'wouldDrinkAgain' | 'photoUrl'>,
   tagIds: number[],
 ) {
   const [review] = await db
@@ -143,12 +143,12 @@ export async function deleteReview(db: Db, reviewId: number, userId: number) {
     .from(schema.reviews)
     .where(and(eq(schema.reviews.id, reviewId), eq(schema.reviews.userId, userId)))
 
-  if (reviewRows.length === 0) return false
+  if (reviewRows.length === 0) return null
 
-  const teaId = reviewRows[0].teaId
+  const review = reviewRows[0]
 
   await db.delete(schema.reviews).where(eq(schema.reviews.id, reviewId))
-  await recalcLeafScore(db, teaId)
+  await recalcLeafScore(db, review.teaId)
 
-  return true
+  return review
 }

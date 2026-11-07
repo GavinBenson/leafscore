@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import type { Review } from '@/db/schema'
 import { LeafScoreBadge } from '@/components/LeafScoreBadge'
@@ -73,6 +74,26 @@ export function ReviewCard({ review, tea, canManage }: ReviewCardProps) {
         <p style={{ margin: '0 0 8px', color: 'var(--color-ink-2)', fontSize: 14 }}>
           {review.notes}
         </p>
+      )}
+
+      {/* Photo */}
+      {review.photoUrl && (
+        <Image
+          src={review.photoUrl}
+          alt={tea ? `Photo of ${tea.name}` : `Photo from ${review.user?.name ?? 'a reviewer'}'s tasting`}
+          width={640}
+          height={480}
+          sizes="(max-width: 640px) 100vw, 600px"
+          style={{
+            display: 'block',
+            width: '100%',
+            height: 'auto',
+            maxHeight: 360,
+            objectFit: 'cover',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 8,
+          }}
+        />
       )}
 
       {/* Would drink again */}

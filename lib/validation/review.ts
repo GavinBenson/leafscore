@@ -6,7 +6,7 @@ export const MAX_BREW_TEMP = 100
 export const MAX_STEEP_SECONDS = 86_400
 export const MAX_NOTES_LENGTH = 5_000
 
-export type ReviewField = 'teaId' | 'score' | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'tagIds'
+export type ReviewField = 'teaId' | 'score' | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'tagIds' | 'photo'
 export type ReviewFieldErrors = Partial<Record<ReviewField, string>>
 
 export type ReviewInput = {
