@@ -38,7 +38,9 @@ Sender defaults to `noreply@tea-ratings.com`; Resend rejects unverified domains.
 
 **Done in code:** branded email (`lib/email/magicLink.ts`), `AUTH_RESEND_FROM` in `.env.example`, send failures show a friendly error instead of an error page. Verified the "Check your email" path with Resend's sandbox sender (`onboarding@resend.dev` → `delivered@resend.dev`).
 
-**Remaining (DNS owner):** add at the `tea-ratings.com` DNS host, then click Verify in Resend:
+`.env.example` was gitignored, so it never reached the repo. Fixed in PBI 13.
+
+**Remaining (DNS owner):** checked 2026-11-06 and none of these records exist yet. Add them at the `tea-ratings.com` DNS host, then click Verify in Resend and send a real link:
 | Type | Name | Value |
 |---|---|---|
 | TXT | `resend._domainkey` | DKIM key from Resend dashboard |
@@ -123,6 +125,8 @@ Tech debt from PBI 1: no `accounts` table, so Google accounts match users by ema
 
 **Done:** New `accounts` table and migration; `getUserByAccount` and `linkAccount` implemented. OAuth tokens are deliberately not stored. Sessions now look users up by id, so a changed Google email cannot detach a session or create a duplicate user. Settings shows connected sign-in methods. Existing Google users link on their next sign-in. Also fixed the sign-in event, which rewrote users' names from their own row instead of the Google profile. Tested at the adapter and session level, not against real Google.
 
-## PBI 13 — Replace boilerplate README · P3 · New
+## PBI 13 — Replace boilerplate README · P3 · Done
 
 README is create-next-app default. Document setup, env vars, DB migrate/seed, Stripe + Resend local testing.
+
+**Done:** README covers setup, every environment variable, database migrate and seed, and local testing of Google, Resend and Stripe, plus the deploy order. Added the `.env.example` the gitignore had been excluding.
