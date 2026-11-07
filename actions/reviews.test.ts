@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { revalidatePath } from 'next/cache'
 import type { createTestDb } from '@/db/testDb'
 import { createReview, getReview, listReviewsForTea } from '@/lib/data/reviews'
 
@@ -56,6 +57,12 @@ describe('review actions', () => {
     it('saves a valid review and redirects to the tea', async () => {
       await expect(submitReview({}, form({ teaId: String(teaId), score: '85' }))).rejects.toThrow(`REDIRECT:/browse/${teaId}`)
       expect((await reviews())[0].review.userId).toBe(userId)
+    })
+
+    it('refreshes the prerendered home page, which shows tea scores', async () => {
+      vi.mocked(revalidatePath).mockClear()
+      await expect(submitReview({}, form({ teaId: String(teaId), score: '85' }))).rejects.toThrow('REDIRECT')
+      expect(revalidatePath).toHaveBeenCalledWith('/')
     })
 
     it('ignores any user id sent by the client', async () => {

@@ -24,6 +24,13 @@ export type ReviewFormState = {
 
 const PHOTO_UPLOAD_FAILED = "We couldn't upload your photo. Try again, or save without it."
 
+function refreshReviewPages(teaId: number) {
+  revalidatePath('/browse/' + teaId)
+  revalidatePath('/journal')
+  // The home page's Top Rated list is prerendered and shows each tea's score.
+  revalidatePath('/')
+}
+
 async function readPhoto(
   formData: FormData,
 ): Promise<{ file: File; type: PhotoType } | { error: string } | null> {
@@ -92,8 +99,7 @@ export async function submitReview(
     return { message: "We couldn't save your review. Try again in a moment." }
   }
 
-  revalidatePath('/browse/' + review.teaId)
-  revalidatePath('/journal')
+  refreshReviewPages(review.teaId)
   redirect('/browse/' + review.teaId)
 }
 
@@ -165,8 +171,7 @@ export async function saveReviewEdit(
 
   await deleteReviewPhoto(oldPhotoToDelete)
 
-  revalidatePath('/browse/' + teaId)
-  revalidatePath('/journal')
+  refreshReviewPages(teaId)
   redirect('/browse/' + teaId)
 }
 
@@ -177,7 +182,6 @@ export async function removeReview(reviewId: number, teaId: number) {
   const deleted = await deleteReview(db, reviewId, user.id)
   await deleteReviewPhoto(deleted?.photoUrl)
 
-  revalidatePath('/browse/' + teaId)
-  revalidatePath('/journal')
+  refreshReviewPages(teaId)
   redirect('/browse/' + teaId)
 }
