@@ -1,5 +1,6 @@
 import {
   pgTable,
+  primaryKey,
   serial,
   text,
   boolean,
@@ -100,6 +101,18 @@ export const teaRequests = pgTable('tea_requests', {
   status: text('status', { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   createdAt: timestamp('created_at').defaultNow(),
 })
+
+// Links a user to an OAuth identity. Tokens aren't stored: sessions are JWTs and
+// nothing calls provider APIs on a user's behalf, so there's no need to hold them.
+export const accounts = pgTable('accounts', {
+  provider: text('provider').notNull(),
+  providerAccountId: text('provider_account_id').notNull(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.provider, table.providerAccountId] }),
+])
 
 export const verificationTokens = pgTable('verification_tokens', {
   identifier: text('identifier').notNull(),

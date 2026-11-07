@@ -115,11 +115,13 @@ Vitest + PGlite `db/testDb.ts` are set up, zero tests exist.
 
 **Done:** `npm run lint` passes with zero errors and zero warnings. Session types come from `next-auth` module augmentation (`types/next-auth.d.ts`), with no `any` left in `lib/auth.ts` or `lib/session.ts`. `ThemeToggle` moved to `useSyncExternalStore`. GitHub Action runs typecheck, lint (warnings fail) and tests on every PR. Also fixed `getCurrentUser` returning a user with no id when the user row no longer exists.
 
-## PBI 12 — Proper OAuth account linking · P3 · New
+## PBI 12 — Proper OAuth account linking · P3 · Done
 
 Tech debt from PBI 1: no `accounts` table, so Google accounts match users by email only.
 - Add `accounts` table + migration; implement `getUserByAccount` / `linkAccount`.
 - Settings: show connected sign-in methods.
+
+**Done:** New `accounts` table and migration; `getUserByAccount` and `linkAccount` implemented. OAuth tokens are deliberately not stored. Sessions now look users up by id, so a changed Google email cannot detach a session or create a duplicate user. Settings shows connected sign-in methods. Existing Google users link on their next sign-in. Also fixed the sign-in event, which rewrote users' names from their own row instead of the Google profile. Tested at the adapter and session level, not against real Google.
 
 ## PBI 13 — Replace boilerplate README · P3 · New
 

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import * as schema from '@/db/schema'
 
@@ -39,6 +39,50 @@ export async function createOrUpdateUser(
     .returning()
 
   return user
+}
+
+export async function getUserByAccount(
+  db: Db,
+  provider: string,
+  providerAccountId: string,
+) {
+  const rows = await db
+    .select({ user: schema.users })
+    .from(schema.accounts)
+    .innerJoin(schema.users, eq(schema.accounts.userId, schema.users.id))
+    .where(
+      and(
+        eq(schema.accounts.provider, provider),
+        eq(schema.accounts.providerAccountId, providerAccountId),
+      ),
+    )
+
+  return rows[0]?.user ?? null
+}
+
+export async function linkAccount(
+  db: Db,
+  data: { userId: number; provider: string; providerAccountId: string; type: string },
+) {
+  await db.insert(schema.accounts).values(data).onConflictDoNothing()
+}
+
+export async function listLinkedProviders(db: Db, userId: number) {
+  const rows = await db
+    .select({ provider: schema.accounts.provider })
+    .from(schema.accounts)
+    .where(eq(schema.accounts.userId, userId))
+
+  return rows.map((row) => row.provider)
+}
+
+export async function updateUserProfile(
+  db: Db,
+  userId: number,
+  data: { name?: string; avatarUrl?: string },
+) {
+  if (data.name === undefined && data.avatarUrl === undefined) return
+  await db.update(schema.users).set(data).where(eq(schema.users.id, userId))
 }
 
 // Selects only what a stranger may see, so email and billing fields can't leak

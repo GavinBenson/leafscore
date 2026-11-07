@@ -3,7 +3,7 @@ import Google from 'next-auth/providers/google'
 import Resend from 'next-auth/providers/resend'
 import { db } from '@/db/client'
 import { createAdapter } from '@/lib/authAdapter'
-import { createOrUpdateUser, getUserByEmail } from '@/lib/data/users'
+import { getUserByEmail, getUserById, updateUserProfile } from '@/lib/data/users'
 import { magicLinkEmail } from '@/lib/email/magicLink'
 import { hasPremium } from '@/lib/premium'
 
@@ -37,22 +37,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: '/signin',
   },
   events: {
-    // Keep name/avatar in sync with the Google profile on every sign-in.
-    async signIn({ user, account }) {
-      if (account?.type === 'oidc' && user.email) {
-        await createOrUpdateUser(db, {
-          email: user.email,
-          name: user.name ?? user.email.split('@')[0],
-          avatarUrl: user.image ?? undefined,
+    // Keep name/avatar in sync with the Google profile on every sign-in. `user`
+    // here is the database row, so the fresh values are on `profile`.
+    async signIn({ user, account, profile }) {
+      const userId = Number(user.id)
+      if (account?.type === 'oidc' && Number.isSafeInteger(userId)) {
+        await updateUserProfile(db, userId, {
+          name: profile?.name ?? undefined,
+          avatarUrl: typeof profile?.picture === 'string' ? profile.picture : undefined,
         })
       }
     },
   },
   callbacks: {
-    async session({ session }) {
-      const dbUser = session.user?.email
-        ? await getUserByEmail(db, session.user.email)
-        : null
+    async session({ session, token }) {
+      // Look up by id so a changed email can't detach a session from its user.
+      // Cookies from before the adapter existed hold Google's id in `sub`, which
+      // is too large to be one of ours, so those fall back to email.
+      const userId = Number(token.sub)
+      const dbUser = Number.isSafeInteger(userId) && userId > 0
+        ? await getUserById(db, userId)
+        : session.user?.email
+          ? await getUserByEmail(db, session.user.email)
+          : null
       if (!dbUser) return session
 
       const result: Session = {

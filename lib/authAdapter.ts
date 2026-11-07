@@ -3,7 +3,13 @@ import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import type { Adapter, AdapterUser } from 'next-auth/adapters'
 import * as schema from '@/db/schema'
 import type { User } from '@/db/schema'
-import { createOrUpdateUser, getUserByEmail, getUserById } from '@/lib/data/users'
+import {
+  createOrUpdateUser,
+  getUserByAccount,
+  getUserByEmail,
+  getUserById,
+  linkAccount,
+} from '@/lib/data/users'
 
 type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 
@@ -17,8 +23,8 @@ function toAdapterUser(user: User): AdapterUser {
   }
 }
 
-// Minimal adapter backed by the existing `users` table. Sessions are JWTs and
-// there is no `accounts` table, so OAuth accounts are matched by email only.
+// Minimal adapter: sessions are JWTs, so only users, OAuth links and magic-link
+// tokens are stored.
 export function createAdapter(db: Db): Adapter {
   return {
     async createUser(data) {
@@ -39,8 +45,9 @@ export function createAdapter(db: Db): Adapter {
       const user = await getUserByEmail(db, email)
       return user ? toAdapterUser(user) : null
     },
-    async getUserByAccount() {
-      return null
+    async getUserByAccount({ provider, providerAccountId }) {
+      const user = await getUserByAccount(db, provider, providerAccountId)
+      return user ? toAdapterUser(user) : null
     },
     async updateUser(data) {
       const userId = Number(data.id)
@@ -55,7 +62,14 @@ export function createAdapter(db: Db): Adapter {
       if (!user) throw new Error(`User ${data.id} not found`)
       return toAdapterUser(user)
     },
-    async linkAccount() {},
+    async linkAccount(account) {
+      await linkAccount(db, {
+        userId: Number(account.userId),
+        provider: account.provider,
+        providerAccountId: account.providerAccountId,
+        type: account.type,
+      })
+    },
     async createVerificationToken(data) {
       await db.insert(schema.verificationTokens).values(data)
       return data

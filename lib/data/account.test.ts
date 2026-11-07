@@ -13,6 +13,7 @@ import {
   getUserByStripeCustomerId,
   setProfilePublic,
   updateUserPremium,
+  updateUserProfile,
 } from './users'
 import {
   addToWishlist,
@@ -58,6 +59,16 @@ describe('account data', () => {
       await setProfilePublic(db, userId, true)
       expect((await getPublicProfile(db, userId))?.id).toBe(userId)
       expect(await getPublicProfile(db, 9999)).toBeNull()
+    })
+
+    it('updates only the given profile fields', async () => {
+      await updateUserProfile(db, userId, { avatarUrl: 'https://x/a.png' })
+      await updateUserProfile(db, userId, {})
+      await updateUserProfile(db, userId, { name: 'Renamed' })
+
+      const user = await getUserById(db, userId)
+      expect(user?.name).toBe('Renamed')
+      expect(user?.avatarUrl).toBe('https://x/a.png')
     })
 
     it('upserts on email and keeps the avatar when none is given', async () => {

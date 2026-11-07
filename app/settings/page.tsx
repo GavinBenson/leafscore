@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { db } from '@/db/client'
-import { getUserById } from '@/lib/data/users'
+import { getUserById, listLinkedProviders } from '@/lib/data/users'
 import { updateProfileVisibility } from '@/actions/profile'
 import { getCurrentUser } from '@/lib/session'
 import { signInPath } from '@/lib/authRedirect'
@@ -16,7 +16,10 @@ export default async function SettingsPage() {
   const user = await getCurrentUser()
   if (!user) redirect(signInPath('/settings'))
 
-  const account = await getUserById(db, user.id)
+  const [account, providers] = await Promise.all([
+    getUserById(db, user.id),
+    listLinkedProviders(db, user.id),
+  ])
   const isPublic = account?.profilePublic ?? true
 
   return (
@@ -80,6 +83,25 @@ export default async function SettingsPage() {
           <Link href={`/u/${user.id}`} className="btn btn-ghost btn-sm">
             View profile
           </Link>
+        </div>
+      </div>
+
+      {/* Sign-in methods */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>
+          Sign-in methods
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+          <span>Google</span>
+          {providers.includes('google') ? (
+            <span className="tag tag-accent">Connected</span>
+          ) : (
+            <span className="tag">Connects next time you use it</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span>Email link</span>
+          <span className="subtle" style={{ overflowWrap: 'anywhere', textAlign: 'right' }}>{user.email}</span>
         </div>
       </div>
 
