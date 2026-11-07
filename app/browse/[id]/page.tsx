@@ -32,7 +32,7 @@ export default async function TeaPage({
 
   return (
     <>
-      <TeaJsonLd tea={tea} brand={brand} reviews={reviews} />
+      <TeaJsonLd tea={tea} brand={brand} />
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>

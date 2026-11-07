@@ -67,9 +67,9 @@ async function ReviewsTab({ userId }: { userId: number }) {
     return (
       <div className="empty-state">
         <p>No reviews yet.</p>
-        <a href="/log" className="btn btn-primary">
+        <Link href="/log" className="btn btn-primary">
           Log your first tea
-        </a>
+        </Link>
       </div>
     )
   }
@@ -90,9 +90,9 @@ async function FavoritesTab({ userId }: { userId: number }) {
     return (
       <div className="empty-state">
         <p>No favorites yet.</p>
-        <a href="/browse" className="btn btn-primary">
+        <Link href="/browse" className="btn btn-primary">
           Browse teas
-        </a>
+        </Link>
       </div>
     )
   }
@@ -113,9 +113,9 @@ async function WishlistTab({ userId }: { userId: number }) {
     return (
       <div className="empty-state">
         <p>Nothing on your wishlist yet.</p>
-        <a href="/browse" className="btn btn-primary">
+        <Link href="/browse" className="btn btn-primary">
           Browse teas
-        </a>
+        </Link>
       </div>
     )
   }

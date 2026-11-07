@@ -1,7 +1,6 @@
 import { eq, desc } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import * as schema from '@/db/schema'
-import type { TeaRequest } from '@/db/schema'
 
 type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 

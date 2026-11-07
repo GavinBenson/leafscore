@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/db/client'
 import { getBrandWithTeas } from '@/lib/data/brands'

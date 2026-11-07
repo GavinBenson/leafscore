@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { db } from '@/db/client'
@@ -26,11 +27,12 @@ export default async function SettingsPage() {
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {user.image ? (
-            <img
+            <Image
               src={user.image}
               alt={user.name}
               width={56}
               height={56}
+              unoptimized
               style={{ borderRadius: '50%' }}
             />
           ) : (

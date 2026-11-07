@@ -1,13 +1,11 @@
-import type { Tea, Brand, Review } from '@/db/schema'
+import type { Tea, Brand } from '@/db/schema'
 
 export function TeaJsonLd({
   tea,
   brand,
-  reviews,
 }: {
   tea: Tea
   brand?: Brand | null
-  reviews: Review[]
 }) {
   const jsonLd = {
     '@context': 'https://schema.org',

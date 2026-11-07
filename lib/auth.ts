@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth'
+import NextAuth, { type Session } from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Resend from 'next-auth/providers/resend'
 import { db } from '@/db/client'
@@ -50,15 +50,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async session({ session }) {
-      if (session.user?.email) {
-        const dbUser = await getUserByEmail(db, session.user.email)
-        if (dbUser) {
-          (session.user as any).id = dbUser.id
-          ;(session.user as any).isPremium = hasPremium(dbUser)
-          ;(session.user as any).isAdmin = dbUser.isAdmin
-        }
+      const dbUser = session.user?.email
+        ? await getUserByEmail(db, session.user.email)
+        : null
+      if (!dbUser) return session
+
+      const result: Session = {
+        expires: session.expires,
+        user: {
+          name: session.user.name,
+          email: session.user.email,
+          image: session.user.image,
+          id: String(dbUser.id),
+          isPremium: hasPremium(dbUser),
+          isAdmin: dbUser.isAdmin ?? false,
+        },
       }
-      return session
+      return result
     },
   },
 })

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -14,11 +15,12 @@ export function SignInButton() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/settings" aria-label="Account settings" style={{ display: 'flex' }}>
           {session.user.image ? (
-            <img
+            <Image
               src={session.user.image}
               alt={session.user.name ?? ''}
               width={28}
               height={28}
+              unoptimized
               style={{ borderRadius: '50%' }}
             />
           ) : (

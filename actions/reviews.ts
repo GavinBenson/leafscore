@@ -123,8 +123,9 @@ export async function saveReviewEdit(
       },
     }
   }
-  // teaId is deliberately dropped: an edit can't move a review to another tea.
-  const { tagIds, teaId: _teaId, ...changes } = parsed.data
+  // Listed field by field so teaId stays out: an edit can't move a review to another tea.
+  const { tagIds, score, brewMethod, brewTemp, steepTime, notes, wouldDrinkAgain } = parsed.data
+  const changes = { score, brewMethod, brewTemp, steepTime, notes, wouldDrinkAgain }
 
   let teaId: number
   let oldPhotoToDelete: string | null = null

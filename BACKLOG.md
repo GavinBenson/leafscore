@@ -107,11 +107,13 @@ Vitest + PGlite `db/testDb.ts` are set up, zero tests exist.
 
 **Done:** 94 tests against in-process Postgres (PGlite) cover the data layer (`lib/data/*`), the auth adapter (extracted to `lib/authAdapter.ts` so it can be tested) and the review actions, including ownership checks and double submits. The adapter test asserts every method Auth.js needs, which would have caught PBI 1.
 
-## PBI 11 — Lint clean + CI · P3 · New
+## PBI 11 — Lint clean + CI · P3 · Done
 
 `npm run lint` fails (`any` in session callback, `<a>` instead of `<Link>` in Journal, unused vars).
 - Type session via `next-auth` module augmentation; drop `as any` in `lib/auth.ts` and `lib/session.ts`.
 - GitHub Action: typecheck, lint, test on PR.
+
+**Done:** `npm run lint` passes with zero errors and zero warnings. Session types come from `next-auth` module augmentation (`types/next-auth.d.ts`), with no `any` left in `lib/auth.ts` or `lib/session.ts`. `ThemeToggle` moved to `useSyncExternalStore`. GitHub Action runs typecheck, lint (warnings fail) and tests on every PR. Also fixed `getCurrentUser` returning a user with no id when the user row no longer exists.
 
 ## PBI 12 — Proper OAuth account linking · P3 · New
 
