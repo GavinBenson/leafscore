@@ -2,7 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/db/client'
 import { getTeaWithDetails } from '@/lib/data/teas'
+import { isFavorited } from '@/lib/data/favorites'
+import { isInWishlist } from '@/lib/data/wishlist'
+import { signInPath } from '@/lib/authRedirect'
 import { getCurrentUser } from '@/lib/session'
+import { TeaListButtons } from '@/components/TeaListButtons'
 import { LeafScoreBadge } from '@/components/LeafScoreBadge'
 import { ReviewCard } from '@/components/ReviewCard'
 import { TeaJsonLd } from '@/components/TeaJsonLd'
@@ -21,6 +25,10 @@ export default async function TeaPage({
   if (!result) notFound()
 
   const { tea, brand, reviews, affiliateLinks } = result
+
+  const [favorited, wishlisted] = user
+    ? await Promise.all([isFavorited(db, user.id, tea.id), isInWishlist(db, user.id, tea.id)])
+    : [false, false]
 
   return (
     <>
@@ -54,6 +62,19 @@ export default async function TeaPage({
           <LeafScoreBadge score={tea.leafScore} />
         </div>
       </div>
+
+      {user ? (
+        <TeaListButtons
+          teaId={tea.id}
+          initialFavorited={favorited}
+          initialWishlisted={wishlisted}
+        />
+      ) : (
+        <p className="subtle" style={{ marginBottom: 24 }}>
+          <Link href={signInPath(`/browse/${tea.id}`)}>Sign in</Link> to save this tea to your
+          favorites or wishlist.
+        </p>
+      )}
 
       {/* Affiliate links */}
       {affiliateLinks.length > 0 && (

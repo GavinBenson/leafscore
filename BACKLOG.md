@@ -76,11 +76,13 @@ Reviews can only be created or deleted.
 
 **Done:** Upload on the review form with a 4MB limit; JPEG, PNG and WebP only, checked from the file's bytes. Photos show on `ReviewCard`, and replacing or removing one, or deleting its review, also deletes the old blob. Tested locally against a fake Blob API, not real Vercel Blob. Production needs `BLOB_READ_WRITE_TOKEN` set.
 
-## PBI 7 — Define what Premium unlocks · P2 · New
+## PBI 7 — Define what Premium unlocks · P2 · Done
 
 Stripe checkout works, but `isPremium` gates nothing outside settings.
 - Decide premium features (e.g. brew-session stats, export, unlimited wishlist, ad-free).
 - Gate them; show upsell for free users.
+
+**Done:** Decision (easy to change, in `lib/premium.ts`): Premium unlocks brew stats (`/journal/stats`), CSV export (`/journal/export`) and an unlimited wishlist; free accounts hold 25 teas. Ad-free was dropped because the site has no ads. Free users see an upsell, and the billing page lists the features. Also added the Favorite and Wishlist buttons on the tea page: the actions existed but had no UI, so those Journal tabs could never fill.
 
 ## PBI 8 — Harden Stripe webhook · P2 · New
 

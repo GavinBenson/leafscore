@@ -5,8 +5,10 @@ import { db } from '@/db/client'
 import {
   isInWishlist,
   addToWishlist,
+  countWishlist,
   removeFromWishlist,
 } from '@/lib/data/wishlist'
+import { canAddToWishlist } from '@/lib/premium'
 import { getCurrentUser } from '@/lib/session'
 
 export async function toggleWishlist(teaId: number) {
@@ -18,11 +20,14 @@ export async function toggleWishlist(teaId: number) {
   if (wishlisted) {
     await removeFromWishlist(db, user.id, teaId)
   } else {
+    if (!canAddToWishlist(user.isPremium, await countWishlist(db, user.id))) {
+      return { wishlisted: false, limitReached: true }
+    }
     await addToWishlist(db, user.id, teaId)
   }
 
   revalidatePath(`/browse/${teaId}`)
   revalidatePath('/journal')
 
-  return { wishlisted: !wishlisted }
+  return { wishlisted: !wishlisted, limitReached: false }
 }

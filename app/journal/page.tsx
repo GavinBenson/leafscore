@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/session'
@@ -27,7 +28,27 @@ export default async function JournalPage({
 
   return (
     <div>
-      <h1 className="section-title">My Journal</h1>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          flexWrap: 'wrap',
+          marginBottom: 16,
+        }}
+      >
+        <h1 className="section-title" style={{ margin: 0 }}>My Journal</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link href="/journal/stats" className="btn btn-ghost btn-sm">
+            Brew stats
+          </Link>
+          {/* Free accounts are sent to the plans page by the route. */}
+          <a href="/journal/export" className="btn btn-ghost btn-sm">
+            Export CSV
+          </a>
+        </div>
+      </div>
       <Suspense>
         <JournalTabs activeTab={activeTab} />
       </Suspense>

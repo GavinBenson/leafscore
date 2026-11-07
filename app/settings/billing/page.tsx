@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/session'
 import { signInPath } from '@/lib/authRedirect'
 import { PLANS } from '@/lib/stripe'
+import { PremiumFeatureList } from '@/components/PremiumUpsell'
 import { SubscribeButton } from '@/components/SubscribeButton'
 
 export const metadata = {
@@ -54,6 +55,14 @@ export default async function BillingPage({
         ) : (
           <span className="tag">Free</span>
         )}
+      </div>
+
+      {/* What Premium includes */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>
+          {user.isPremium ? 'Your Premium includes' : 'Premium includes'}
+        </div>
+        <PremiumFeatureList />
       </div>
 
       {/* Plan cards */}
