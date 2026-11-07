@@ -15,6 +15,10 @@ export async function listWishlist(db: Db, userId: number) {
     .where(eq(schema.wishlist.userId, userId))
 }
 
+export async function countWishlist(db: Db, userId: number) {
+  return db.$count(schema.wishlist, eq(schema.wishlist.userId, userId))
+}
+
 export async function addToWishlist(db: Db, userId: number, teaId: number) {
   await db
     .insert(schema.wishlist)

@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, gt, isNull, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import * as schema from '@/db/schema'
 import type { NewReview } from '@/db/schema'
@@ -64,6 +64,30 @@ export async function getReview(db: Db, reviewId: number) {
   }
 }
 
+// A double-submit that slips past the disabled button: same user, tea, score
+// and notes within a few seconds. Repeat tastings later on are legitimate.
+export async function findRecentDuplicateReview(
+  db: Db,
+  data: { userId: number; teaId: number; score: number; notes: string | null },
+  windowSeconds = 30,
+) {
+  const rows = await db
+    .select({ id: schema.reviews.id })
+    .from(schema.reviews)
+    .where(
+      and(
+        eq(schema.reviews.userId, data.userId),
+        eq(schema.reviews.teaId, data.teaId),
+        eq(schema.reviews.score, data.score),
+        data.notes === null ? isNull(schema.reviews.notes) : eq(schema.reviews.notes, data.notes),
+        gt(schema.reviews.createdAt, sql`now() - make_interval(secs => ${windowSeconds})`),
+      ),
+    )
+    .limit(1)
+
+  return rows[0] ?? null
+}
+
 export async function createReview(
   db: Db,
   data: NewReview,
@@ -85,18 +109,46 @@ export async function createReview(
   return review
 }
 
+// Only the review's author can change it, and it stays on the same tea.
+export async function updateReview(
+  db: Db,
+  reviewId: number,
+  userId: number,
+  data: Pick<NewReview, 'score' | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'wouldDrinkAgain' | 'photoUrl'>,
+  tagIds: number[],
+) {
+  const [review] = await db
+    .update(schema.reviews)
+    .set(data)
+    .where(and(eq(schema.reviews.id, reviewId), eq(schema.reviews.userId, userId)))
+    .returning()
+
+  if (!review) return null
+
+  await db.delete(schema.reviewTags).where(eq(schema.reviewTags.reviewId, reviewId))
+  if (tagIds.length > 0) {
+    await db.insert(schema.reviewTags).values(
+      tagIds.map((flavorTagId) => ({ reviewId, flavorTagId })),
+    )
+  }
+
+  await recalcLeafScore(db, review.teaId)
+
+  return review
+}
+
 export async function deleteReview(db: Db, reviewId: number, userId: number) {
   const reviewRows = await db
     .select()
     .from(schema.reviews)
     .where(and(eq(schema.reviews.id, reviewId), eq(schema.reviews.userId, userId)))
 
-  if (reviewRows.length === 0) return false
+  if (reviewRows.length === 0) return null
 
-  const teaId = reviewRows[0].teaId
+  const review = reviewRows[0]
 
   await db.delete(schema.reviews).where(eq(schema.reviews.id, reviewId))
-  await recalcLeafScore(db, teaId)
+  await recalcLeafScore(db, review.teaId)
 
-  return true
+  return review
 }

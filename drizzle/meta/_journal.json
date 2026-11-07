@@ -15,6 +15,20 @@
       "when": 1784690438011,
       "tag": "0001_puzzling_microbe",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794026936703,
+      "tag": "0002_stripe_events_payment_failed",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794027546663,
+      "tag": "0003_accounts",
+      "breakpoints": true
     }
   ]
 }

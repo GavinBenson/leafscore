@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/session'
@@ -27,7 +28,27 @@ export default async function JournalPage({
 
   return (
     <div>
-      <h1 className="section-title">My Journal</h1>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          flexWrap: 'wrap',
+          marginBottom: 16,
+        }}
+      >
+        <h1 className="section-title" style={{ margin: 0 }}>My Journal</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link href="/journal/stats" className="btn btn-ghost btn-sm">
+            Brew stats
+          </Link>
+          {/* Free accounts are sent to the plans page by the route. */}
+          <a href="/journal/export" className="btn btn-ghost btn-sm">
+            Export CSV
+          </a>
+        </div>
+      </div>
       <Suspense>
         <JournalTabs activeTab={activeTab} />
       </Suspense>
@@ -46,9 +67,9 @@ async function ReviewsTab({ userId }: { userId: number }) {
     return (
       <div className="empty-state">
         <p>No reviews yet.</p>
-        <a href="/log" className="btn btn-primary">
+        <Link href="/log" className="btn btn-primary">
           Log your first tea
-        </a>
+        </Link>
       </div>
     )
   }
@@ -56,7 +77,7 @@ async function ReviewsTab({ userId }: { userId: number }) {
   return (
     <div className="review-list">
       {rows.map(({ review, tea }) => (
-        <ReviewCard key={review.id} review={review} showTea />
+        <ReviewCard key={review.id} review={review} tea={tea} canManage />
       ))}
     </div>
   )
@@ -69,9 +90,9 @@ async function FavoritesTab({ userId }: { userId: number }) {
     return (
       <div className="empty-state">
         <p>No favorites yet.</p>
-        <a href="/browse" className="btn btn-primary">
+        <Link href="/browse" className="btn btn-primary">
           Browse teas
-        </a>
+        </Link>
       </div>
     )
   }
@@ -92,9 +113,9 @@ async function WishlistTab({ userId }: { userId: number }) {
     return (
       <div className="empty-state">
         <p>Nothing on your wishlist yet.</p>
-        <a href="/browse" className="btn btn-primary">
+        <Link href="/browse" className="btn btn-primary">
           Browse teas
-        </a>
+        </Link>
       </div>
     )
   }

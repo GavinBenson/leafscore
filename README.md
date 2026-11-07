@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LeafScore
 
-## Getting Started
+A community tea rating site. Browse teas, log tastings with scores and brew details, and keep a journal of reviews, favorites and a wishlist.
 
-First, run the development server:
+Built with Next.js 16 (App Router), React 19, Tailwind 4, Drizzle ORM on Neon Postgres, Auth.js v5, Stripe, Resend and Vercel Blob. The product backlog is in [`BACKLOG.md`](./BACKLOG.md).
+
+## Setup
+
+You need Node.js 20.9 or newer and a Postgres database ([Neon](https://neon.tech) is what production uses; its serverless driver is required).
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill it in, see below
+npm run db:migrate
+npm run db:seed              # optional: sample brands, teas and flavor tags
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+[`.env.example`](./.env.example) lists them all. To get the site running you need `DATABASE_URL`, `AUTH_SECRET` and one sign-in method.
 
-## Learn More
+| Variable | Needed for | Where it comes from |
+|---|---|---|
+| `DATABASE_URL` | Everything | Neon connection string |
+| `AUTH_SECRET` | Sign-in | `npx auth secret` |
+| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google sign-in | Google Cloud OAuth client |
+| `AUTH_RESEND_KEY`, `AUTH_RESEND_FROM` | Magic-link email | Resend API key and a verified sender |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Premium | Stripe dashboard, or `stripe listen` locally |
+| `STRIPE_MONTHLY_PRICE_ID`, `STRIPE_YEARLY_PRICE_ID` | Premium | Stripe recurring prices |
+| `BLOB_READ_WRITE_TOKEN` | Review photos | Vercel Blob store |
+| `NEXT_PUBLIC_APP_URL` | Stripe return URLs, sitemap | Your site's URL, no trailing slash |
 
-To learn more about Next.js, take a look at the following resources:
+Features whose variables are missing fail when used, not at startup. `DATABASE_URL` is the exception: the app won't start without it.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Migrations are generated from `db/schema.ts` into `drizzle/`.
 
-## Deploy on Vercel
+```bash
+npm run db:generate   # after changing db/schema.ts
+npm run db:migrate    # apply to the database in .env.local
+npm run db:seed       # sample data
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Migrations don't run on deploy.** Run `npm run db:migrate` against production *before* deploying code that depends on a new migration. The session callback reads the `users` table on every signed-in request, so a missing column breaks sign-in for everyone.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To make someone an admin (for `/admin`), set `users.is_admin` to `true` in the database.
+
+## Testing locally
+
+```bash
+npm test             # Vitest, against an in-process Postgres (PGlite); no setup needed
+npm run typecheck
+npm run lint
+```
+
+CI runs all three on every pull request, and lint warnings fail the build.
+
+### Google sign-in
+
+Add `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI on your Google OAuth client.
+
+### Magic-link email
+
+Resend only accepts senders on a domain verified in your account. Without one:
+
+- Set `AUTH_RESEND_FROM="LeafScore <onboarding@resend.dev>"` to use Resend's sandbox sender, which delivers only to your own Resend account's address.
+- Sending to `delivered@resend.dev` succeeds without delivering anything, which is enough to test the "Check your email" page.
+
+Production needs the DNS records in `BACKLOG.md` (PBI 3).
+
+### Stripe
+
+Use test mode keys and the [Stripe CLI](https://stripe.com/docs/stripe-cli):
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+Copy the `whsec_...` secret it prints into `STRIPE_WEBHOOK_SECRET` and restart the dev server. Then subscribe from `/settings/billing` with the test card `4242 4242 4242 4242`.
+
+The billing portal behind "Manage Subscription" must be activated once in the [Stripe dashboard](https://dashboard.stripe.com/test/settings/billing/portal).
+
+In production, the webhook endpoint (`/api/stripe/webhook`) must send these events:
+
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.payment_failed`
+
+### Premium
+
+What Premium unlocks is defined in `lib/premium.ts`. To test it without paying, set `users.is_premium` to `true` in the database and leave `premium_expires_at` empty.
+
+## Project layout
+
+There is no `src/` directory.
+
+| Path | Contents |
+|---|---|
+| `app/` | Pages, layouts and route handlers |
+| `components/` | Shared React components |
+| `actions/` | Server actions |
+| `lib/data/` | Data access; each function takes the database as its first argument |
+| `lib/validation/` | Parsing and validation of user input |
+| `db/` | Schema, client, migration and seed scripts, test database |
+| `drizzle/` | Generated migrations |
+
+Conventions are in [`CLAUDE.md`](./CLAUDE.md). This version of Next.js has breaking changes from older releases, so check `node_modules/next/dist/docs/` before relying on what you remember.
+
+## Deploying
+
+The site deploys to Vercel. For a release:
+
+1. Set the environment variables above in the Vercel project.
+2. Run `npm run db:migrate` against the production database.
+3. Merge to `master`.

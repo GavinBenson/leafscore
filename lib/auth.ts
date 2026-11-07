@@ -1,74 +1,11 @@
-import NextAuth from 'next-auth'
-import type { Adapter, AdapterUser } from 'next-auth/adapters'
+import NextAuth, { type Session } from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Resend from 'next-auth/providers/resend'
 import { db } from '@/db/client'
-import { createOrUpdateUser, getUserByEmail, getUserById } from '@/lib/data/users'
+import { createAdapter } from '@/lib/authAdapter'
+import { getUserByEmail, getUserById, updateUserProfile } from '@/lib/data/users'
 import { magicLinkEmail } from '@/lib/email/magicLink'
-import { users, verificationTokens } from '@/db/schema'
-import type { User } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
-
-function toAdapterUser(user: User): AdapterUser {
-  return {
-    id: String(user.id),
-    email: user.email,
-    name: user.name,
-    image: user.avatarUrl,
-    emailVerified: null,
-  }
-}
-
-// Minimal adapter backed by the existing `users` table. Sessions are JWTs and
-// there is no `accounts` table, so OAuth accounts are matched by email only.
-const adapter: Adapter = {
-  async createUser(data) {
-    const user = await createOrUpdateUser(db, {
-      email: data.email,
-      name: data.name ?? data.email.split('@')[0],
-      avatarUrl: data.image ?? undefined,
-    })
-    return toAdapterUser(user)
-  },
-  async getUser(id) {
-    const userId = Number(id)
-    if (!Number.isInteger(userId)) return null
-    const user = await getUserById(db, userId)
-    return user ? toAdapterUser(user) : null
-  },
-  async getUserByEmail(email) {
-    const user = await getUserByEmail(db, email)
-    return user ? toAdapterUser(user) : null
-  },
-  async getUserByAccount() {
-    return null
-  },
-  async updateUser(data) {
-    const userId = Number(data.id)
-    const [user] = await db
-      .update(users)
-      .set({
-        ...(data.name ? { name: data.name } : {}),
-        ...(data.image !== undefined ? { avatarUrl: data.image } : {}),
-      })
-      .where(eq(users.id, userId))
-      .returning()
-    if (!user) throw new Error(`User ${data.id} not found`)
-    return toAdapterUser(user)
-  },
-  async linkAccount() {},
-  async createVerificationToken(data) {
-    await db.insert(verificationTokens).values(data)
-    return data
-  },
-  async useVerificationToken({ identifier, token }) {
-    const [row] = await db
-      .delete(verificationTokens)
-      .where(and(eq(verificationTokens.identifier, identifier), eq(verificationTokens.token, token)))
-      .returning()
-    return row ?? null
-  },
-}
+import { hasPremium } from '@/lib/premium'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -93,35 +30,50 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  adapter,
+  adapter: createAdapter(db),
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/signin',
     error: '/signin',
   },
   events: {
-    // Keep name/avatar in sync with the Google profile on every sign-in.
-    async signIn({ user, account }) {
-      if (account?.type === 'oidc' && user.email) {
-        await createOrUpdateUser(db, {
-          email: user.email,
-          name: user.name ?? user.email.split('@')[0],
-          avatarUrl: user.image ?? undefined,
+    // Keep name/avatar in sync with the Google profile on every sign-in. `user`
+    // here is the database row, so the fresh values are on `profile`.
+    async signIn({ user, account, profile }) {
+      const userId = Number(user.id)
+      if (account?.type === 'oidc' && Number.isSafeInteger(userId)) {
+        await updateUserProfile(db, userId, {
+          name: profile?.name ?? undefined,
+          avatarUrl: typeof profile?.picture === 'string' ? profile.picture : undefined,
         })
       }
     },
   },
   callbacks: {
-    async session({ session }) {
-      if (session.user?.email) {
-        const dbUser = await getUserByEmail(db, session.user.email)
-        if (dbUser) {
-          (session.user as any).id = dbUser.id
-          ;(session.user as any).isPremium = dbUser.isPremium
-          ;(session.user as any).isAdmin = dbUser.isAdmin
-        }
+    async session({ session, token }) {
+      // Look up by id so a changed email can't detach a session from its user.
+      // Cookies from before the adapter existed hold Google's id in `sub`, which
+      // is too large to be one of ours, so those fall back to email.
+      const userId = Number(token.sub)
+      const dbUser = Number.isSafeInteger(userId) && userId > 0
+        ? await getUserById(db, userId)
+        : session.user?.email
+          ? await getUserByEmail(db, session.user.email)
+          : null
+      if (!dbUser) return session
+
+      const result: Session = {
+        expires: session.expires,
+        user: {
+          name: session.user.name,
+          email: session.user.email,
+          image: session.user.image,
+          id: String(dbUser.id),
+          isPremium: hasPremium(dbUser),
+          isAdmin: dbUser.isAdmin ?? false,
+        },
       }
-      return session
+      return result
     },
   },
 })

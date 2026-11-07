@@ -1,5 +1,6 @@
 import {
   pgTable,
+  primaryKey,
   serial,
   text,
   boolean,
@@ -18,6 +19,7 @@ export const users = pgTable('users', {
   isPremium: boolean('is_premium').default(false),
   stripeCustomerId: text('stripe_customer_id'),
   premiumExpiresAt: timestamp('premium_expires_at'),
+  paymentFailedAt: timestamp('payment_failed_at'),
   profilePublic: boolean('profile_public').default(true),
   isAdmin: boolean('is_admin').default(false),
   createdAt: timestamp('created_at').defaultNow(),
@@ -100,6 +102,18 @@ export const teaRequests = pgTable('tea_requests', {
   createdAt: timestamp('created_at').defaultNow(),
 })
 
+// Links a user to an OAuth identity. Tokens aren't stored: sessions are JWTs and
+// nothing calls provider APIs on a user's behalf, so there's no need to hold them.
+export const accounts = pgTable('accounts', {
+  provider: text('provider').notNull(),
+  providerAccountId: text('provider_account_id').notNull(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.provider, table.providerAccountId] }),
+])
+
 export const verificationTokens = pgTable('verification_tokens', {
   identifier: text('identifier').notNull(),
   token: text('token').notNull().unique(),
@@ -107,6 +121,13 @@ export const verificationTokens = pgTable('verification_tokens', {
 }, (table) => [
   uniqueIndex('verification_tokens_identifier_token_idx').on(table.identifier, table.token),
 ])
+
+// Stripe delivers at-least-once; a row here means the event has been handled.
+export const stripeEvents = pgTable('stripe_events', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  processedAt: timestamp('processed_at').defaultNow(),
+})
 
 export const affiliateLinks = pgTable('affiliate_links', {
   id: serial('id').primaryKey(),

@@ -10,10 +10,25 @@ export async function createTestDb(): Promise<PgliteDatabase<typeof schema>> {
   return db
 }
 
-export async function seedTestUser(db: PgliteDatabase<typeof schema>) {
+export async function seedTestUser(
+  db: PgliteDatabase<typeof schema>,
+  email = 'test@example.com',
+) {
   const [user] = await db.insert(schema.users).values({
     name: 'Test User',
-    email: 'test@example.com',
+    email,
   }).returning()
   return user
+}
+
+export async function seedTestTea(
+  db: PgliteDatabase<typeof schema>,
+  values: Partial<schema.NewTea> = {},
+) {
+  const [tea] = await db.insert(schema.teas).values({
+    name: 'Test Tea',
+    type: 'green',
+    ...values,
+  }).returning()
+  return tea
 }

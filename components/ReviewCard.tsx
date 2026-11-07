@@ -1,12 +1,19 @@
+import Image from 'next/image'
+import Link from 'next/link'
 import type { Review } from '@/db/schema'
 import { LeafScoreBadge } from '@/components/LeafScoreBadge'
+import { ReviewActions } from '@/components/ReviewActions'
 
 type ReviewCardProps = {
-  review: Review & { user?: { name: string; avatarUrl: string | null } }
-  showTea?: boolean
+  review: Review & {
+    user?: { id: number; name: string; avatarUrl: string | null; profilePublic: boolean | null }
+  }
+  // In a journal the author is always the reader, so headline the tea instead.
+  tea?: { id: number; name: string }
+  canManage?: boolean
 }
 
-export function ReviewCard({ review, showTea }: ReviewCardProps) {
+export function ReviewCard({ review, tea, canManage }: ReviewCardProps) {
   const dateStr = review.createdAt
     ? new Date(review.createdAt).toLocaleDateString()
     : ''
@@ -23,9 +30,25 @@ export function ReviewCard({ review, showTea }: ReviewCardProps) {
         }}
       >
         <div>
-          <span style={{ fontWeight: 600, fontSize: 15 }}>
-            {review.user?.name ?? 'Anonymous'}
-          </span>
+          {tea ? (
+            <Link
+              href={`/browse/${tea.id}`}
+              style={{ fontWeight: 600, fontSize: 15, color: 'inherit' }}
+            >
+              {tea.name}
+            </Link>
+          ) : review.user?.profilePublic ? (
+            <Link
+              href={`/u/${review.user.id}`}
+              style={{ fontWeight: 600, fontSize: 15, color: 'inherit' }}
+            >
+              {review.user.name}
+            </Link>
+          ) : (
+            <span style={{ fontWeight: 600, fontSize: 15 }}>
+              {review.user?.name ?? 'Anonymous'}
+            </span>
+          )}
           {dateStr && (
             <span className="subtle" style={{ marginLeft: 8 }}>
               {dateStr}
@@ -62,12 +85,34 @@ export function ReviewCard({ review, showTea }: ReviewCardProps) {
         </p>
       )}
 
+      {/* Photo */}
+      {review.photoUrl && (
+        <Image
+          src={review.photoUrl}
+          alt={tea ? `Photo of ${tea.name}` : `Photo from ${review.user?.name ?? 'a reviewer'}'s tasting`}
+          width={640}
+          height={480}
+          sizes="(max-width: 640px) 100vw, 600px"
+          style={{
+            display: 'block',
+            width: '100%',
+            height: 'auto',
+            maxHeight: 360,
+            objectFit: 'cover',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 8,
+          }}
+        />
+      )}
+
       {/* Would drink again */}
       {review.wouldDrinkAgain !== null && review.wouldDrinkAgain !== undefined && (
         <div className="subtle" style={{ fontSize: 13 }}>
           {review.wouldDrinkAgain ? 'Would drink again' : 'Would not drink again'}
         </div>
       )}
+
+      {canManage && <ReviewActions reviewId={review.id} teaId={review.teaId} />}
     </div>
   )
 }
