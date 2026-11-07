@@ -64,7 +64,7 @@ export async function getTea(db: Db, teaId: number) {
 }
 
 export type ReviewWithUser = schema.Review & {
-  user: Pick<schema.User, 'id' | 'name' | 'avatarUrl'>
+  user: Pick<schema.User, 'id' | 'name' | 'avatarUrl' | 'profilePublic'>
 }
 
 export async function getTeaWithDetails(db: Db, teaId: number) {
@@ -78,6 +78,7 @@ export async function getTeaWithDetails(db: Db, teaId: number) {
         id: schema.users.id,
         name: schema.users.name,
         avatarUrl: schema.users.avatarUrl,
+        profilePublic: schema.users.profilePublic,
       },
     })
     .from(schema.reviews)

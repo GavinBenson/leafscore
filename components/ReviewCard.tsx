@@ -5,7 +5,9 @@ import { LeafScoreBadge } from '@/components/LeafScoreBadge'
 import { ReviewActions } from '@/components/ReviewActions'
 
 type ReviewCardProps = {
-  review: Review & { user?: { name: string; avatarUrl: string | null } }
+  review: Review & {
+    user?: { id: number; name: string; avatarUrl: string | null; profilePublic: boolean | null }
+  }
   // In a journal the author is always the reader, so headline the tea instead.
   tea?: { id: number; name: string }
   canManage?: boolean
@@ -34,6 +36,13 @@ export function ReviewCard({ review, tea, canManage }: ReviewCardProps) {
               style={{ fontWeight: 600, fontSize: 15, color: 'inherit' }}
             >
               {tea.name}
+            </Link>
+          ) : review.user?.profilePublic ? (
+            <Link
+              href={`/u/${review.user.id}`}
+              style={{ fontWeight: 600, fontSize: 15, color: 'inherit' }}
+            >
+              {review.user.name}
             </Link>
           ) : (
             <span style={{ fontWeight: 600, fontSize: 15 }}>

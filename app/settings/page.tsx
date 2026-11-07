@@ -1,4 +1,8 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { db } from '@/db/client'
+import { getUserById } from '@/lib/data/users'
+import { updateProfileVisibility } from '@/actions/profile'
 import { getCurrentUser } from '@/lib/session'
 import { signInPath } from '@/lib/authRedirect'
 import { signOutAction } from '@/actions/auth'
@@ -10,6 +14,9 @@ export const metadata = {
 export default async function SettingsPage() {
   const user = await getCurrentUser()
   if (!user) redirect(signInPath('/settings'))
+
+  const account = await getUserById(db, user.id)
+  const isPublic = account?.profilePublic ?? true
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -48,6 +55,29 @@ export default async function SettingsPage() {
             <div style={{ fontWeight: 700, fontSize: 18 }}>{user.name}</div>
             <div className="subtle">{user.email}</div>
           </div>
+        </div>
+      </div>
+
+      {/* Profile privacy */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>
+          Public profile
+        </div>
+        <p className="subtle" style={{ margin: '0 0 12px' }}>
+          {isPublic
+            ? 'Anyone can see your profile page, with your reviews and favorites.'
+            : 'Your profile page is hidden. Your reviews still appear on tea pages under your name.'}
+        </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <form action={updateProfileVisibility}>
+            <input type="hidden" name="profilePublic" value={isPublic ? 'false' : 'true'} />
+            <button type="submit" className="btn btn-outline btn-sm">
+              {isPublic ? 'Make private' : 'Make public'}
+            </button>
+          </form>
+          <Link href={`/u/${user.id}`} className="btn btn-ghost btn-sm">
+            View profile
+          </Link>
         </div>
       </div>
 

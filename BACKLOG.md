@@ -92,10 +92,12 @@ Stripe checkout works, but `isPremium` gates nothing outside settings.
 
 **Done:** Handles `customer.subscription.updated` and `invoice.payment_failed`, re-reads each subscription from Stripe so out-of-order events cannot leave stale state, writes `premiumExpiresAt` from the period end, and ignores repeats through a new `stripe_events` table (a failed event releases its claim so the retry runs). Premium ends a day after expiry if a cancellation webhook is missed. The billing page warns about failed payments. Also fixed Manage Subscription showing raw JSON, Subscribe sticking on Redirecting..., and resubscribing creating a second Stripe customer. Tested with a fake subscription lookup, not real Stripe. **Deploy:** run the migration, and enable all four events on the Stripe webhook endpoint: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`.
 
-## PBI 9 — Public profiles · P3 · New
+## PBI 9 — Public profiles · P3 · Done
 
 `users.profile_public` exists but unused.
 - `/u/[id]` page: public reviews, favorites; privacy toggle in Settings.
+
+**Done:** Public profile page at `/u/[id]` with reviews and favorites, and a privacy toggle in Settings. Only id, name and avatar are selected, so email cannot leak. A private profile returns the same 404 as a missing one, except to its owner. Tea pages link to public authors only. Note: `profile_public` defaults to true, so accounts are public until their owner changes it.
 
 ## PBI 10 — Tests · P2 · Done
 

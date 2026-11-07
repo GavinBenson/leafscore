@@ -41,6 +41,30 @@ export async function createOrUpdateUser(
   return user
 }
 
+// Selects only what a stranger may see, so email and billing fields can't leak
+// into a profile page. Pass viewerId to let owners see their own private profile.
+export async function getPublicProfile(db: Db, userId: number, viewerId?: number) {
+  const rows = await db
+    .select({
+      id: schema.users.id,
+      name: schema.users.name,
+      avatarUrl: schema.users.avatarUrl,
+      profilePublic: schema.users.profilePublic,
+      createdAt: schema.users.createdAt,
+    })
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+
+  const profile = rows[0]
+  if (!profile) return null
+  if (!profile.profilePublic && profile.id !== viewerId) return null
+  return profile
+}
+
+export async function setProfilePublic(db: Db, userId: number, profilePublic: boolean) {
+  await db.update(schema.users).set({ profilePublic }).where(eq(schema.users.id, userId))
+}
+
 export async function getUserByStripeCustomerId(db: Db, customerId: string) {
   const rows = await db
     .select()

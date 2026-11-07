@@ -9,7 +9,9 @@ import {
   createOrUpdateUser,
   getUserByEmail,
   getUserById,
+  getPublicProfile,
   getUserByStripeCustomerId,
+  setProfilePublic,
   updateUserPremium,
 } from './users'
 import {
@@ -42,6 +44,20 @@ describe('account data', () => {
       expect((await getUserByStripeCustomerId(db, 'cus_1'))?.id).toBe(userId)
       expect(await getUserByEmail(db, 'nobody@example.com')).toBeNull()
       expect(await getUserByStripeCustomerId(db, 'cus_none')).toBeNull()
+    })
+
+    it('public profiles expose no private fields and honor the privacy setting', async () => {
+      const profile = await getPublicProfile(db, userId)
+      expect(Object.keys(profile ?? {}).sort()).toEqual(['avatarUrl', 'createdAt', 'id', 'name', 'profilePublic'])
+
+      await setProfilePublic(db, userId, false)
+      expect(await getPublicProfile(db, userId)).toBeNull()
+      expect(await getPublicProfile(db, userId, otherUserId)).toBeNull()
+      expect((await getPublicProfile(db, userId, userId))?.id).toBe(userId)
+
+      await setProfilePublic(db, userId, true)
+      expect((await getPublicProfile(db, userId))?.id).toBe(userId)
+      expect(await getPublicProfile(db, 9999)).toBeNull()
     })
 
     it('upserts on email and keeps the avatar when none is given', async () => {
