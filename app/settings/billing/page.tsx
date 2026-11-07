@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/session'
 import { signInPath } from '@/lib/authRedirect'
+import { db } from '@/db/client'
+import { getUserById } from '@/lib/data/users'
 import { PLANS } from '@/lib/stripe'
 import { PremiumFeatureList } from '@/components/PremiumUpsell'
 import { SubscribeButton } from '@/components/SubscribeButton'
@@ -18,10 +20,17 @@ export default async function BillingPage({
   if (!user) redirect(signInPath('/settings/billing'))
 
   const { success } = await searchParams
+  const account = await getUserById(db, user.id)
 
   return (
     <div style={{ maxWidth: 600 }}>
       <h1 className="section-title">Billing</h1>
+
+      {account?.paymentFailedAt && user.isPremium && (
+        <p className="form-error" role="alert">
+          Your last payment failed. Update your card under Manage Subscription to keep Premium.
+        </p>
+      )}
 
       {success === 'true' && (
         <div
@@ -54,6 +63,11 @@ export default async function BillingPage({
           </div>
         ) : (
           <span className="tag">Free</span>
+        )}
+        {user.isPremium && account?.premiumExpiresAt && (
+          <p className="subtle" style={{ margin: '8px 0 0' }}>
+            Current period ends {account.premiumExpiresAt.toLocaleDateString('en-US', { dateStyle: 'long', timeZone: 'UTC' })}
+          </p>
         )}
       </div>
 

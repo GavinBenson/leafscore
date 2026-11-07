@@ -41,26 +41,29 @@ export async function createOrUpdateUser(
   return user
 }
 
+export async function getUserByStripeCustomerId(db: Db, customerId: string) {
+  const rows = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.stripeCustomerId, customerId))
+
+  return rows[0] ?? null
+}
+
+// Fields left undefined are not changed; null clears premiumExpiresAt/paymentFailedAt.
 export async function updateUserPremium(
   db: Db,
   userId: number,
   data: {
-    isPremium: boolean
+    isPremium?: boolean
     stripeCustomerId?: string
-    premiumExpiresAt?: Date
+    premiumExpiresAt?: Date | null
+    paymentFailedAt?: Date | null
   },
 ) {
   const [user] = await db
     .update(schema.users)
-    .set({
-      isPremium: data.isPremium,
-      ...(data.stripeCustomerId !== undefined
-        ? { stripeCustomerId: data.stripeCustomerId }
-        : {}),
-      ...(data.premiumExpiresAt !== undefined
-        ? { premiumExpiresAt: data.premiumExpiresAt }
-        : {}),
-    })
+    .set(data)
     .where(eq(schema.users.id, userId))
     .returning()
 

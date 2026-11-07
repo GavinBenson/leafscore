@@ -18,6 +18,7 @@ export const users = pgTable('users', {
   isPremium: boolean('is_premium').default(false),
   stripeCustomerId: text('stripe_customer_id'),
   premiumExpiresAt: timestamp('premium_expires_at'),
+  paymentFailedAt: timestamp('payment_failed_at'),
   profilePublic: boolean('profile_public').default(true),
   isAdmin: boolean('is_admin').default(false),
   createdAt: timestamp('created_at').defaultNow(),
@@ -107,6 +108,13 @@ export const verificationTokens = pgTable('verification_tokens', {
 }, (table) => [
   uniqueIndex('verification_tokens_identifier_token_idx').on(table.identifier, table.token),
 ])
+
+// Stripe delivers at-least-once; a row here means the event has been handled.
+export const stripeEvents = pgTable('stripe_events', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  processedAt: timestamp('processed_at').defaultNow(),
+})
 
 export const affiliateLinks = pgTable('affiliate_links', {
   id: serial('id').primaryKey(),

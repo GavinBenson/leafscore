@@ -84,11 +84,13 @@ Stripe checkout works, but `isPremium` gates nothing outside settings.
 
 **Done:** Decision (easy to change, in `lib/premium.ts`): Premium unlocks brew stats (`/journal/stats`), CSV export (`/journal/export`) and an unlimited wishlist; free accounts hold 25 teas. Ad-free was dropped because the site has no ads. Free users see an upsell, and the billing page lists the features. Also added the Favorite and Wishlist buttons on the tea page: the actions existed but had no UI, so those Journal tabs could never fill.
 
-## PBI 8 — Harden Stripe webhook · P2 · New
+## PBI 8 — Harden Stripe webhook · P2 · Done
 
 - Handle `customer.subscription.updated` and `invoice.payment_failed`.
 - Set `premiumExpiresAt` from `current_period_end` (never written today).
 - Idempotency on repeated events.
+
+**Done:** Handles `customer.subscription.updated` and `invoice.payment_failed`, re-reads each subscription from Stripe so out-of-order events cannot leave stale state, writes `premiumExpiresAt` from the period end, and ignores repeats through a new `stripe_events` table (a failed event releases its claim so the retry runs). Premium ends a day after expiry if a cancellation webhook is missed. The billing page warns about failed payments. Also fixed Manage Subscription showing raw JSON, Subscribe sticking on Redirecting..., and resubscribing creating a second Stripe customer. Tested with a fake subscription lookup, not real Stripe. **Deploy:** run the migration, and enable all four events on the Stripe webhook endpoint: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`.
 
 ## PBI 9 — Public profiles · P3 · New
 

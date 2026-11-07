@@ -5,6 +5,7 @@ import Resend from 'next-auth/providers/resend'
 import { db } from '@/db/client'
 import { createOrUpdateUser, getUserByEmail, getUserById } from '@/lib/data/users'
 import { magicLinkEmail } from '@/lib/email/magicLink'
+import { hasPremium } from '@/lib/premium'
 import { users, verificationTokens } from '@/db/schema'
 import type { User } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -117,7 +118,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const dbUser = await getUserByEmail(db, session.user.email)
         if (dbUser) {
           (session.user as any).id = dbUser.id
-          ;(session.user as any).isPremium = dbUser.isPremium
+          ;(session.user as any).isPremium = hasPremium(dbUser)
           ;(session.user as any).isAdmin = dbUser.isAdmin
         }
       }
