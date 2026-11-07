@@ -97,11 +97,13 @@ Stripe checkout works, but `isPremium` gates nothing outside settings.
 `users.profile_public` exists but unused.
 - `/u/[id]` page: public reviews, favorites; privacy toggle in Settings.
 
-## PBI 10 — Tests · P2 · New
+## PBI 10 — Tests · P2 · Done
 
 Vitest + PGlite `db/testDb.ts` are set up, zero tests exist.
 - Data-layer tests (`lib/data/*`), auth adapter tests, review action tests.
 - Would have caught PBI 1.
+
+**Done:** 94 tests against in-process Postgres (PGlite) cover the data layer (`lib/data/*`), the auth adapter (extracted to `lib/authAdapter.ts` so it can be tested) and the review actions, including ownership checks and double submits. The adapter test asserts every method Auth.js needs, which would have caught PBI 1.
 
 ## PBI 11 — Lint clean + CI · P3 · New
 

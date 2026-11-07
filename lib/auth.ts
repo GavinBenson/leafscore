@@ -1,75 +1,11 @@
 import NextAuth from 'next-auth'
-import type { Adapter, AdapterUser } from 'next-auth/adapters'
 import Google from 'next-auth/providers/google'
 import Resend from 'next-auth/providers/resend'
 import { db } from '@/db/client'
-import { createOrUpdateUser, getUserByEmail, getUserById } from '@/lib/data/users'
+import { createAdapter } from '@/lib/authAdapter'
+import { createOrUpdateUser, getUserByEmail } from '@/lib/data/users'
 import { magicLinkEmail } from '@/lib/email/magicLink'
 import { hasPremium } from '@/lib/premium'
-import { users, verificationTokens } from '@/db/schema'
-import type { User } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
-
-function toAdapterUser(user: User): AdapterUser {
-  return {
-    id: String(user.id),
-    email: user.email,
-    name: user.name,
-    image: user.avatarUrl,
-    emailVerified: null,
-  }
-}
-
-// Minimal adapter backed by the existing `users` table. Sessions are JWTs and
-// there is no `accounts` table, so OAuth accounts are matched by email only.
-const adapter: Adapter = {
-  async createUser(data) {
-    const user = await createOrUpdateUser(db, {
-      email: data.email,
-      name: data.name ?? data.email.split('@')[0],
-      avatarUrl: data.image ?? undefined,
-    })
-    return toAdapterUser(user)
-  },
-  async getUser(id) {
-    const userId = Number(id)
-    if (!Number.isInteger(userId)) return null
-    const user = await getUserById(db, userId)
-    return user ? toAdapterUser(user) : null
-  },
-  async getUserByEmail(email) {
-    const user = await getUserByEmail(db, email)
-    return user ? toAdapterUser(user) : null
-  },
-  async getUserByAccount() {
-    return null
-  },
-  async updateUser(data) {
-    const userId = Number(data.id)
-    const [user] = await db
-      .update(users)
-      .set({
-        ...(data.name ? { name: data.name } : {}),
-        ...(data.image !== undefined ? { avatarUrl: data.image } : {}),
-      })
-      .where(eq(users.id, userId))
-      .returning()
-    if (!user) throw new Error(`User ${data.id} not found`)
-    return toAdapterUser(user)
-  },
-  async linkAccount() {},
-  async createVerificationToken(data) {
-    await db.insert(verificationTokens).values(data)
-    return data
-  },
-  async useVerificationToken({ identifier, token }) {
-    const [row] = await db
-      .delete(verificationTokens)
-      .where(and(eq(verificationTokens.identifier, identifier), eq(verificationTokens.token, token)))
-      .returning()
-    return row ?? null
-  },
-}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -94,7 +30,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  adapter,
+  adapter: createAdapter(db),
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/signin',
