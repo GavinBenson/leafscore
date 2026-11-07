@@ -1,16 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { startTransition, useActionState, useState, type FormEvent } from 'react'
 import type { FlavorTag } from '@/db/schema'
 import { TeaSearch } from '@/components/TeaSearch'
-import { submitReview } from '@/actions/reviews'
+import { submitReview, type ReviewFormState } from '@/actions/reviews'
+import { MAX_NOTES_LENGTH, MAX_STEEP_SECONDS } from '@/lib/validation/review'
 
 type Props = {
   tea?: { id: number; name: string } | null
   flavorTags: FlavorTag[]
 }
 
+const initialState: ReviewFormState = {}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null
+  return (
+    <p className="field-error" role="alert">
+      {message}
+    </p>
+  )
+}
+
 export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
+  const [state, formAction, isPending] = useActionState(submitReview, initialState)
+  const errors = state.fieldErrors ?? {}
   const [selectedTea, setSelectedTea] = useState<{
     id: number
     name: string
@@ -18,6 +32,15 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
   const [score, setScore] = useState(75)
   const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(new Set())
   const [wouldDrinkAgain, setWouldDrinkAgain] = useState(true)
+
+  // Submitting through a transition rather than <form action> skips React's
+  // automatic form reset, so a validation error doesn't wipe what was typed.
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isPending) return
+    const formData = new FormData(event.currentTarget)
+    startTransition(() => formAction(formData))
+  }
 
   function toggleTag(id: number) {
     setSelectedTagIds((prev) => {
@@ -42,7 +65,13 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
   )
 
   return (
-    <form action={submitReview}>
+    <form onSubmit={handleSubmit} noValidate>
+      {state.message && (
+        <p className="form-error" role="alert">
+          {state.message}
+        </p>
+      )}
+
       {/* Tea selection */}
       {!selectedTea ? (
         <div style={{ marginBottom: 24 }}>
@@ -73,6 +102,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
             )}
           </div>
           <input type="hidden" name="teaId" value={selectedTea.id} />
+          <FieldError message={errors.teaId} />
         </div>
       )}
 
@@ -98,6 +128,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           className="field"
           style={{ height: 'auto', padding: '8px 0' }}
         />
+        <FieldError message={errors.score} />
       </div>
 
       {/* Brew method */}
@@ -112,13 +143,18 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
         >
           Brew method
         </label>
-        <select name="brewMethod" className="field">
+        <select
+          name="brewMethod"
+          className="field"
+          aria-invalid={Boolean(errors.brewMethod)}
+        >
           <option value="">-- Select --</option>
           <option value="gongfu">Gongfu</option>
           <option value="western">Western</option>
           <option value="cold_brew">Cold Brew</option>
           <option value="grandpa">Grandpa</option>
         </select>
+        <FieldError message={errors.brewMethod} />
       </div>
 
       {/* Brew temp */}
@@ -140,7 +176,9 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           placeholder="e.g. 85"
           min={0}
           max={100}
+          aria-invalid={Boolean(errors.brewTemp)}
         />
+        <FieldError message={errors.brewTemp} />
       </div>
 
       {/* Steep time */}
@@ -161,7 +199,10 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           className="field"
           placeholder="e.g. 30"
           min={0}
+          max={MAX_STEEP_SECONDS}
+          aria-invalid={Boolean(errors.steepTime)}
         />
+        <FieldError message={errors.steepTime} />
       </div>
 
       {/* Notes */}
@@ -181,7 +222,10 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           className="field"
           style={{ height: 100, padding: '10px 12px', resize: 'vertical' }}
           placeholder="How was it? Tasting notes, aroma, mouthfeel..."
+          maxLength={MAX_NOTES_LENGTH}
+          aria-invalid={Boolean(errors.notes)}
         />
+        <FieldError message={errors.notes} />
       </div>
 
       {/* Would drink again */}
@@ -250,15 +294,17 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           name="tagIds"
           value={Array.from(selectedTagIds).join(',')}
         />
+        <FieldError message={errors.tagIds} />
       </div>
 
       {/* Submit */}
       <button
         type="submit"
         className="btn btn-primary"
-        disabled={!selectedTea}
+        disabled={!selectedTea || isPending}
+        aria-busy={isPending}
       >
-        Submit Review
+        {isPending ? 'Saving...' : 'Submit Review'}
       </button>
     </form>
   )

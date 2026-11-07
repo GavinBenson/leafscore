@@ -3,56 +3,60 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db } from '@/db/client'
-import { createReview, deleteReview } from '@/lib/data/reviews'
+import { listFlavorTags } from '@/lib/data/flavorTags'
+import { createReview, deleteReview, findRecentDuplicateReview } from '@/lib/data/reviews'
+import { getTea } from '@/lib/data/teas'
 import { getCurrentUser } from '@/lib/session'
+import { parseReviewForm, type ReviewFieldErrors } from '@/lib/validation/review'
 
-export async function submitReview(formData: FormData) {
+export type ReviewFormState = {
+  message?: string
+  fieldErrors?: ReviewFieldErrors
+}
+
+export async function submitReview(
+  _prev: ReviewFormState,
+  formData: FormData,
+): Promise<ReviewFormState> {
   const user = await getCurrentUser()
-  if (!user) throw new Error('Unauthorized')
+  if (!user) {
+    return { message: 'Your session has ended. Sign in again to save this review.' }
+  }
 
-  const teaId = Number(formData.get('teaId'))
-  const score = Number(formData.get('score'))
-  const brewMethod = formData.get('brewMethod') as
-    | 'gongfu'
-    | 'western'
-    | 'cold_brew'
-    | 'grandpa'
-    | null
-  const brewTemp = formData.get('brewTemp')
-    ? Number(formData.get('brewTemp'))
-    : undefined
-  const steepTime = formData.get('steepTime')
-    ? Number(formData.get('steepTime'))
-    : undefined
-  const notes = (formData.get('notes') as string) || undefined
-  const wouldDrinkAgain = formData.get('wouldDrinkAgain') === 'true'
-    ? true
-    : formData.get('wouldDrinkAgain') === 'false'
-      ? false
-      : undefined
+  const parsed = parseReviewForm(formData)
+  if (!parsed.ok) {
+    return { message: 'Check the highlighted fields.', fieldErrors: parsed.errors }
+  }
+  const { tagIds, ...review } = parsed.data
 
-  const tagIdsRaw = formData.get('tagIds') as string | null
-  const tagIds = tagIdsRaw
-    ? tagIdsRaw.split(',').map(Number).filter((n) => !isNaN(n))
-    : undefined
+  try {
+    if (!(await getTea(db, review.teaId))) {
+      return { fieldErrors: { teaId: 'That tea no longer exists. Choose another.' } }
+    }
 
-  await createReview(
-    db,
-    {
-      teaId,
+    if (tagIds.length > 0) {
+      const known = new Set((await listFlavorTags(db)).map((tag) => tag.id))
+      if (tagIds.some((id) => !known.has(id))) {
+        return { fieldErrors: { tagIds: 'One of the flavor tags is not valid.' } }
+      }
+    }
+
+    const duplicate = await findRecentDuplicateReview(db, {
       userId: user.id,
-      score,
-      brewMethod: brewMethod ?? undefined,
-      brewTemp,
-      steepTime,
-      notes,
-      wouldDrinkAgain,
-    },
-    tagIds,
-  )
+      teaId: review.teaId,
+      score: review.score,
+      notes: review.notes,
+    })
+    if (!duplicate) {
+      await createReview(db, { ...review, userId: user.id }, tagIds)
+    }
+  } catch (error) {
+    console.error('submitReview failed', error)
+    return { message: "We couldn't save your review. Try again in a moment." }
+  }
 
-  revalidatePath('/browse/' + teaId)
-  redirect('/browse/' + teaId)
+  revalidatePath('/browse/' + review.teaId)
+  redirect('/browse/' + review.teaId)
 }
 
 export async function removeReview(reviewId: number, teaId: number) {

@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, gt, isNull, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import * as schema from '@/db/schema'
 import type { NewReview } from '@/db/schema'
@@ -62,6 +62,30 @@ export async function getReview(db: Db, reviewId: number) {
     ...review,
     tags: tags.map((t) => t.tag),
   }
+}
+
+// A double-submit that slips past the disabled button: same user, tea, score
+// and notes within a few seconds. Repeat tastings later on are legitimate.
+export async function findRecentDuplicateReview(
+  db: Db,
+  data: { userId: number; teaId: number; score: number; notes: string | null },
+  windowSeconds = 30,
+) {
+  const rows = await db
+    .select({ id: schema.reviews.id })
+    .from(schema.reviews)
+    .where(
+      and(
+        eq(schema.reviews.userId, data.userId),
+        eq(schema.reviews.teaId, data.teaId),
+        eq(schema.reviews.score, data.score),
+        data.notes === null ? isNull(schema.reviews.notes) : eq(schema.reviews.notes, data.notes),
+        gt(schema.reviews.createdAt, sql`now() - make_interval(secs => ${windowSeconds})`),
+      ),
+    )
+    .limit(1)
+
+  return rows[0] ?? null
 }
 
 export async function createReview(

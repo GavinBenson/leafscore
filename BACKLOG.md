@@ -53,12 +53,14 @@ Found while testing PBI 2. At 375px the topbar (brand + 4 links + theme toggle +
 
 **Done:** Bottom tab bar under 640px; the account control collapses to an avatar linking to `/settings`, so it is always on screen. Checked in Edge at 375px on every public, signed-in and admin page: no horizontal scroll.
 
-## PBI 4 — Review form validation + error states · P2 · New
+## PBI 4 — Review form validation + error states · P2 · Done
 
 `submitReview` trusts FormData: no score bounds, `teaId` can be `NaN`, `brewMethod` is cast not checked, errors throw raw.
 - Validate server-side (score 0–100, known tea, enum values, temp/time ranges).
 - Show inline errors via `useActionState`; pending state on submit button.
 - Prevent duplicate submit.
+
+**Done:** Server-side validation in `lib/validation/review.ts` (with unit tests), known-tea and known-tag checks in the action, inline errors through `useActionState` that keep what the user typed, pending state on the submit button, and a 30-second server-side guard against identical double submits.
 
 ## PBI 5 — Edit a review · P2 · New
 

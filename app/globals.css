@@ -189,6 +189,27 @@ body {
   font-weight: 600;
 }
 
+/* ─── Form errors ─── */
+.field-error,
+.form-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-clay);
+}
+
+.form-error {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-clay);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
+.field[aria-invalid="true"] {
+  border-color: var(--color-clay);
+}
+
 /* ─── Mobile nav: tab bar under 640px, inline links above ─── */
 .topbar .nav-links,
 .account-details {
