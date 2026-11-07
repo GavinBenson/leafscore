@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/db/client'
 import { getTeaWithDetails } from '@/lib/data/teas'
+import { getCurrentUser } from '@/lib/session'
 import { LeafScoreBadge } from '@/components/LeafScoreBadge'
 import { ReviewCard } from '@/components/ReviewCard'
 import { TeaJsonLd } from '@/components/TeaJsonLd'
@@ -12,7 +13,10 @@ export default async function TeaPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const result = await getTeaWithDetails(db, Number(id))
+  const [result, user] = await Promise.all([
+    getTeaWithDetails(db, Number(id)),
+    getCurrentUser(),
+  ])
 
   if (!result) notFound()
 
@@ -103,7 +107,11 @@ export default async function TeaPage({
         ) : (
           <div className="review-list">
             {reviews.map((review) => (
-              <ReviewCard key={review.id} review={review} />
+              <ReviewCard
+                key={review.id}
+                review={review}
+                canManage={user?.id === review.userId}
+              />
             ))}
           </div>
         )}

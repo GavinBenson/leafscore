@@ -109,6 +109,34 @@ export async function createReview(
   return review
 }
 
+// Only the review's author can change it, and it stays on the same tea.
+export async function updateReview(
+  db: Db,
+  reviewId: number,
+  userId: number,
+  data: Pick<NewReview, 'score' | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'wouldDrinkAgain'>,
+  tagIds: number[],
+) {
+  const [review] = await db
+    .update(schema.reviews)
+    .set(data)
+    .where(and(eq(schema.reviews.id, reviewId), eq(schema.reviews.userId, userId)))
+    .returning()
+
+  if (!review) return null
+
+  await db.delete(schema.reviewTags).where(eq(schema.reviewTags.reviewId, reviewId))
+  if (tagIds.length > 0) {
+    await db.insert(schema.reviewTags).values(
+      tagIds.map((flavorTagId) => ({ reviewId, flavorTagId })),
+    )
+  }
+
+  await recalcLeafScore(db, review.teaId)
+
+  return review
+}
+
 export async function deleteReview(db: Db, reviewId: number, userId: number) {
   const reviewRows = await db
     .select()

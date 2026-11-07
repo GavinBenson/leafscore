@@ -62,10 +62,12 @@ Found while testing PBI 2. At 375px the topbar (brand + 4 links + theme toggle +
 
 **Done:** Server-side validation in `lib/validation/review.ts` (with unit tests), known-tea and known-tag checks in the action, inline errors through `useActionState` that keep what the user typed, pending state on the submit button, and a 30-second server-side guard against identical double submits.
 
-## PBI 5 — Edit a review · P2 · New
+## PBI 5 — Edit a review · P2 · Done
 
 Reviews can only be created or deleted.
 - Edit action + page from Journal and tea page; recompute tea `leafScore`.
+
+**Done:** Edit page at `/reviews/[id]/edit` reusing `ReviewForm`, with Edit and Delete controls on the Journal and tea pages. Only the author sees them; anyone else gets a 404. Saving recomputes `leafScore`. Also gave `removeReview` the UI it never had, and Journal cards now name the tea instead of saying Anonymous.
 
 ## PBI 6 — Review photos · P2 · New
 

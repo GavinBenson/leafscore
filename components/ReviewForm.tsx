@@ -3,12 +3,23 @@
 import { startTransition, useActionState, useState, type FormEvent } from 'react'
 import type { FlavorTag } from '@/db/schema'
 import { TeaSearch } from '@/components/TeaSearch'
-import { submitReview, type ReviewFormState } from '@/actions/reviews'
+import { saveReviewEdit, submitReview, type ReviewFormState } from '@/actions/reviews'
 import { MAX_NOTES_LENGTH, MAX_STEEP_SECONDS } from '@/lib/validation/review'
 
 type Props = {
   tea?: { id: number; name: string } | null
   flavorTags: FlavorTag[]
+  // When set, the form edits this review instead of creating a new one.
+  review?: {
+    id: number
+    score: number
+    brewMethod: string | null
+    brewTemp: number | null
+    steepTime: number | null
+    notes: string | null
+    wouldDrinkAgain: boolean | null
+    tagIds: number[]
+  }
 }
 
 const initialState: ReviewFormState = {}
@@ -22,16 +33,21 @@ function FieldError({ message }: { message?: string }) {
   )
 }
 
-export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
-  const [state, formAction, isPending] = useActionState(submitReview, initialState)
+export function ReviewForm({ tea: initialTea, flavorTags, review }: Props) {
+  const [state, formAction, isPending] = useActionState(
+    review ? saveReviewEdit : submitReview,
+    initialState,
+  )
   const errors = state.fieldErrors ?? {}
   const [selectedTea, setSelectedTea] = useState<{
     id: number
     name: string
   } | null>(initialTea ?? null)
-  const [score, setScore] = useState(75)
-  const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(new Set())
-  const [wouldDrinkAgain, setWouldDrinkAgain] = useState(true)
+  const [score, setScore] = useState(review?.score ?? 75)
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(
+    new Set(review?.tagIds ?? []),
+  )
+  const [wouldDrinkAgain, setWouldDrinkAgain] = useState(review?.wouldDrinkAgain ?? true)
 
   // Submitting through a transition rather than <form action> skips React's
   // automatic form reset, so a validation error doesn't wipe what was typed.
@@ -72,6 +88,8 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
         </p>
       )}
 
+      {review && <input type="hidden" name="reviewId" value={review.id} />}
+
       {/* Tea selection */}
       {!selectedTea ? (
         <div style={{ marginBottom: 24 }}>
@@ -91,7 +109,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontWeight: 600 }}>{selectedTea.name}</span>
-            {!initialTea && (
+            {!initialTea && !review && (
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -146,6 +164,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
         <select
           name="brewMethod"
           className="field"
+          defaultValue={review?.brewMethod ?? ''}
           aria-invalid={Boolean(errors.brewMethod)}
         >
           <option value="">-- Select --</option>
@@ -176,6 +195,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           placeholder="e.g. 85"
           min={0}
           max={100}
+          defaultValue={review?.brewTemp ?? ''}
           aria-invalid={Boolean(errors.brewTemp)}
         />
         <FieldError message={errors.brewTemp} />
@@ -200,6 +220,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           placeholder="e.g. 30"
           min={0}
           max={MAX_STEEP_SECONDS}
+          defaultValue={review?.steepTime ?? ''}
           aria-invalid={Boolean(errors.steepTime)}
         />
         <FieldError message={errors.steepTime} />
@@ -223,6 +244,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
           style={{ height: 100, padding: '10px 12px', resize: 'vertical' }}
           placeholder="How was it? Tasting notes, aroma, mouthfeel..."
           maxLength={MAX_NOTES_LENGTH}
+          defaultValue={review?.notes ?? ''}
           aria-invalid={Boolean(errors.notes)}
         />
         <FieldError message={errors.notes} />
@@ -304,7 +326,7 @@ export function ReviewForm({ tea: initialTea, flavorTags }: Props) {
         disabled={!selectedTea || isPending}
         aria-busy={isPending}
       >
-        {isPending ? 'Saving...' : 'Submit Review'}
+        {isPending ? 'Saving...' : review ? 'Save Changes' : 'Submit Review'}
       </button>
     </form>
   )

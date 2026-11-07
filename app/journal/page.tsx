@@ -56,7 +56,7 @@ async function ReviewsTab({ userId }: { userId: number }) {
   return (
     <div className="review-list">
       {rows.map(({ review, tea }) => (
-        <ReviewCard key={review.id} review={review} showTea />
+        <ReviewCard key={review.id} review={review} tea={tea} canManage />
       ))}
     </div>
   )
