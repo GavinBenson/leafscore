@@ -45,11 +45,13 @@ Sender defaults to `noreply@tea-ratings.com`; Resend rejects unverified domains.
 | MX | `send` | `feedback-smtp.us-east-1.amazonses.com` (priority 10) |
 | TXT | `send` | `v=spf1 include:amazonses.com ~all` |
 
-## PBI 14 — Mobile navbar overflows; Sign in hidden at 375px · P1 · New
+## PBI 14 — Mobile navbar overflows; Sign in hidden at 375px · P1 · Done
 
 Found while testing PBI 2. At 375px the topbar (brand + 4 links + theme toggle + Sign in) is wider than the viewport: page scrolls horizontally and the Sign in / avatar controls are off-screen.
 - Mobile nav pattern (bottom tab bar or menu) under 640px; account control always visible.
 - No horizontal scroll at 375px on any page.
+
+**Done:** Bottom tab bar under 640px; the account control collapses to an avatar linking to `/settings`, so it is always on screen. Checked in Edge at 375px on every public, signed-in and admin page: no horizontal scroll.
 
 ## PBI 4 — Review form validation + error states · P2 · New
 
