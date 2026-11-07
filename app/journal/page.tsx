@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/session'
+import { signInPath } from '@/lib/authRedirect'
 import { db } from '@/db/client'
 import { listReviewsForUser } from '@/lib/data/reviews'
 import { listFavorites } from '@/lib/data/favorites'
@@ -19,7 +20,7 @@ export default async function JournalPage({
   searchParams: Promise<{ tab?: string }>
 }) {
   const user = await getCurrentUser()
-  if (!user) redirect('/api/auth/signin')
+  if (!user) redirect(signInPath('/journal'))
 
   const params = await searchParams
   const activeTab = params.tab ?? 'reviews'

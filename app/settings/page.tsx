@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/session'
+import { signInPath } from '@/lib/authRedirect'
+import { signOutAction } from '@/actions/auth'
 
 export const metadata = {
   title: 'Settings',
@@ -7,7 +9,7 @@ export const metadata = {
 
 export default async function SettingsPage() {
   const user = await getCurrentUser()
-  if (!user) redirect('/api/auth/signin')
+  if (!user) redirect(signInPath('/settings'))
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -81,7 +83,7 @@ export default async function SettingsPage() {
         <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>
           Account
         </div>
-        <form action="/api/auth/signout" method="POST">
+        <form action={signOutAction}>
           <button type="submit" className="btn btn-ghost">
             Sign Out
           </button>
