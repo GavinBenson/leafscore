@@ -1,15 +1,46 @@
 import { notFound } from 'next/navigation'
 import { db } from '@/db/client'
-import { getBrandWithTeas } from '@/lib/data/brands'
+import { connection } from 'next/server'
+import { getBrandWithTeasCached } from '@/lib/cache'
 import { TeaCard } from '@/components/TeaCard'
+import type { Metadata } from 'next'
+import { getBrandSeo } from '@/lib/data/seo'
+import { parseId } from '@/lib/ids'
+import { safeHttpUrl } from '@/lib/safeUrl'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  try {
+    const brandId = parseId((await params).id)
+    const brand = brandId === null ? null : await getBrandSeo(db, brandId)
+    if (!brand) return { title: 'Brand not found' }
+    const title = `${brand.name} teas, ratings & reviews`
+    const description = `Browse teas from ${brand.name}${brand.country ? ` (${brand.country})` : ''} with community LeafScore ratings.`
+    const url = `/brands/${brand.id}`
+    return {
+      title,
+      description,
+      alternates: { canonical: url },
+      openGraph: { type: 'website', siteName: 'LeafScore', title, description, url },
+      twitter: { card: 'summary_large_image', title, description },
+    }
+  } catch {
+    return { title: 'Brand' }
+  }
+}
 
 export default async function BrandPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = await params
-  const result = await getBrandWithTeas(db, Number(id))
+  const brandId = parseId((await params).id)
+  if (brandId === null) notFound()
+  await connection()
+  const result = await getBrandWithTeasCached(brandId)
 
   if (!result) notFound()
 
@@ -33,9 +64,9 @@ export default async function BrandPage({
         {brand.country && (
           <p className="subtle" style={{ margin: '0 0 8px' }}>{brand.country}</p>
         )}
-        {brand.website && (
+        {safeHttpUrl(brand.website) && (
           <a
-            href={brand.website}
+            href={safeHttpUrl(brand.website) ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'var(--color-primary)', fontSize: 14 }}

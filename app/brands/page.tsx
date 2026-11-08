@@ -1,9 +1,18 @@
 import Link from 'next/link'
-import { db } from '@/db/client'
-import { listBrands } from '@/lib/data/brands'
+import { connection } from 'next/server'
+import { listBrandsCached } from '@/lib/cache'
+
+export const metadata = {
+  title: 'Tea brands',
+  description: 'Browse tea brands and see how the community rates their teas.',
+  alternates: { canonical: '/brands' },
+  openGraph: { url: '/brands', siteName: 'LeafScore', title: 'Tea brands' },
+}
 
 export default async function BrandsPage() {
-  const brands = await listBrands(db)
+  // Explicitly dynamic (not baked at build); data is in the tagged data cache.
+  await connection()
+  const brands = await listBrandsCached()
 
   return (
     <>

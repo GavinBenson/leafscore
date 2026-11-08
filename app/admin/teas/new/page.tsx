@@ -1,33 +1,49 @@
 import { db } from '@/db/client'
 import { listBrands } from '@/lib/data/brands'
 import { createTea } from '@/actions/admin'
+import { approveRequestWithTea } from '@/actions/teaRequests'
+import { getTeaRequest } from '@/lib/data/teaRequests'
+import { TEA_TYPES } from '@/lib/teaTypes'
 
 export const metadata = {
   title: 'Add Tea',
 }
 
-const TEA_TYPES = [
-  'Green',
-  'Black',
-  'Oolong',
-  'White',
-  'Pu-erh',
-  'Yellow',
-  'Herbal',
-  'Rooibos',
-]
-
 const CAFFEINE_LEVELS = ['low', 'medium', 'high'] as const
 const LEAF_STYLES = ['loose', 'bag', 'cake', 'powder'] as const
 
-export default async function NewTeaPage() {
+export default async function NewTeaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ requestId?: string; error?: string }>
+}) {
+  const sp = await searchParams
   const brands = await listBrands(db)
+  const requestId = /^\d+$/.test(sp.requestId ?? '') ? Number(sp.requestId) : null
+  const request = requestId ? await getTeaRequest(db, requestId) : null
+  const pending = request?.status === 'pending' ? request : null
+  const prefillBrand = pending?.brand
+    ? brands.find((b) => b.name.toLowerCase() === pending.brand!.toLowerCase())
+    : undefined
 
   return (
     <div style={{ maxWidth: 560 }}>
       <h1 className="section-title">Add Tea</h1>
 
-      <form action={createTea} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {pending && (
+        <p className="subtle">
+          Creating a tea from the request &ldquo;{pending.name}&rdquo;
+          {pending.brand ? ` (brand: ${pending.brand})` : ''}. Saving it approves the request.
+        </p>
+      )}
+      {sp.error && (
+        <p className="form-error" role="alert">
+          {sp.error}
+        </p>
+      )}
+
+      <form action={pending ? approveRequestWithTea : createTea} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {pending && <input type="hidden" name="requestId" value={pending.id} />}
         {/* Name */}
         <div>
           <label
@@ -43,6 +59,7 @@ export default async function NewTeaPage() {
             required
             className="field"
             placeholder="e.g. Dragon Well"
+            defaultValue={pending?.name}
           />
         </div>
 
@@ -54,7 +71,7 @@ export default async function NewTeaPage() {
           >
             Brand
           </label>
-          <select id="brandId" name="brandId" className="field">
+          <select id="brandId" name="brandId" className="field" defaultValue={prefillBrand?.id ?? ''}>
             <option value="">No brand</option>
             {brands.map((brand) => (
               <option key={brand.id} value={brand.id}>
@@ -72,7 +89,7 @@ export default async function NewTeaPage() {
           >
             Type *
           </label>
-          <select id="type" name="type" required className="field">
+          <select id="type" name="type" required className="field" defaultValue={pending?.type ?? ''}>
             <option value="">Select type</option>
             {TEA_TYPES.map((t) => (
               <option key={t} value={t}>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { db } from '@/db/client'
 import { listTeas } from '@/lib/data/teas'
+import { AdminDeleteTeaButton } from '@/components/AdminDeleteTeaButton'
 import { LeafScoreBadge } from '@/components/LeafScoreBadge'
 
 export const metadata = {
@@ -65,6 +66,12 @@ export default async function AdminTeasPage() {
                   <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--color-ink-2)' }}>
                     Reviews
                   </th>
+                  <th style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--color-ink-2)' }}>
+                    Buy links
+                  </th>
+                  <th style={{ padding: '8px 12px' }}>
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -93,6 +100,12 @@ export default async function AdminTeasPage() {
                     </td>
                     <td style={{ padding: '10px 12px', color: 'var(--color-ink-2)' }}>
                       {tea.reviewCount ?? 0}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <Link href={`/admin/teas/${tea.id}/affiliate`}>Affiliate links</Link>
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <AdminDeleteTeaButton teaId={tea.id} teaName={tea.name} />
                     </td>
                   </tr>
                 ))}
