@@ -30,7 +30,7 @@ describe('auth adapter', () => {
     }
   })
 
-  it('creates a user, falling back to the email for a name', async () => {
+  it('creates a user, falling back to a neutral name that does not leak the email', async () => {
     const user = await adapter.createUser!({
       id: 'ignored',
       email: 'new@example.com',
@@ -38,7 +38,8 @@ describe('auth adapter', () => {
       name: null,
     })
 
-    expect(user.name).toBe('new')
+    expect(user.name).toMatch(/^Tea drinker \d{4}$/)
+    expect(user.name).not.toContain('new@')
     expect(user.email).toBe('new@example.com')
     expect(user.id).toMatch(/^\d+$/)
   })

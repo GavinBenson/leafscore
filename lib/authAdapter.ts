@@ -10,6 +10,7 @@ import {
   getUserById,
   linkAccount,
 } from '@/lib/data/users'
+import { neutralDisplayName } from '@/lib/validation/displayName'
 
 type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 
@@ -30,7 +31,7 @@ export function createAdapter(db: Db): Adapter {
     async createUser(data) {
       const user = await createOrUpdateUser(db, {
         email: data.email,
-        name: data.name ?? data.email.split('@')[0],
+        name: data.name?.trim() || neutralDisplayName(),
         avatarUrl: data.image ?? undefined,
       })
       return toAdapterUser(user)
