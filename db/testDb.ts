@@ -1,10 +1,11 @@
 import { PGlite } from '@electric-sql/pglite'
+import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm'
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
 import * as schema from './schema'
 
 export async function createTestDb(): Promise<PgliteDatabase<typeof schema>> {
-  const client = new PGlite()
+  const client = new PGlite({ extensions: { pg_trgm } })
   const db = drizzle(client, { schema })
   await migrate(db, { migrationsFolder: './drizzle' })
   return db

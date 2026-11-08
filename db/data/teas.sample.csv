@@ -1,0 +1,40 @@
+# STARTER SAMPLE ONLY. Needs human review before production use.
+# Products are widely known lines; fields I was unsure of are left empty. Verify names, types and
+# websites against the brands' own catalogues. The 300-500 tea launch target needs human-curated or
+# licensed data; this file is only a format example and a small seed.
+# Allowed: type = green|black|white|oolong|puerh|herbal|mate|rooibos; caffeine_level = low|medium|high;
+# leaf_style = loose|bag|cake|powder. website is the brand's site (used only when the brand is new).
+brand,name,type,subtype,origin,caffeine_level,leaf_style,website
+Twinings,English Breakfast,black,,,,bag,https://www.twinings.co.uk
+Twinings,Earl Grey,black,earl grey,,,bag,https://www.twinings.co.uk
+Twinings,Lady Grey,black,,,,bag,https://www.twinings.co.uk
+Twinings,Camomile,herbal,chamomile,,low,bag,https://www.twinings.co.uk
+Twinings,Pure Peppermint,herbal,peppermint,,low,bag,https://www.twinings.co.uk
+Twinings,Irish Breakfast,black,,,,bag,https://www.twinings.co.uk
+Yorkshire Tea,Yorkshire Tea,black,,,,bag,https://www.yorkshiretea.co.uk
+Yorkshire Tea,Decaf,black,,,low,bag,https://www.yorkshiretea.co.uk
+Tazo,Awake English Breakfast,black,,,,bag,https://www.tazo.com
+Tazo,Earl Grey,black,earl grey,,,bag,https://www.tazo.com
+Tazo,Zen,green,,,,bag,https://www.tazo.com
+Tazo,Passion,herbal,,,low,bag,https://www.tazo.com
+Celestial Seasonings,Sleepytime Extra,herbal,,,low,bag,https://www.celestialseasonings.com
+Celestial Seasonings,Red Zinger,herbal,hibiscus,,low,bag,https://www.celestialseasonings.com
+Celestial Seasonings,Tension Tamer,herbal,,,low,bag,https://www.celestialseasonings.com
+Celestial Seasonings,Lemon Zinger,herbal,,,low,bag,https://www.celestialseasonings.com
+Bigelow,Constant Comment,black,,,,bag,https://www.bigelowtea.com
+Bigelow,Earl Grey,black,earl grey,,,bag,https://www.bigelowtea.com
+Bigelow,Green Tea,green,,,,bag,https://www.bigelowtea.com
+Bigelow,Lemon Lift,black,,,,bag,https://www.bigelowtea.com
+Lipton,Yellow Label Black Tea,black,,,,bag,https://www.lipton.com
+Lipton,Green Tea,green,,,,bag,https://www.lipton.com
+Pukka,Peppermint and Licorice,herbal,peppermint,,low,bag,https://www.pukkaherbs.com
+Pukka,Three Ginger,herbal,ginger,,low,bag,https://www.pukkaherbs.com
+Pukka,Night Time,herbal,,,low,bag,https://www.pukkaherbs.com
+Traditional Medicinals,Throat Coat,herbal,,,low,bag,https://www.traditionalmedicinals.com
+Numi,Gunpowder Green,green,gunpowder,,,bag,https://numitea.com
+Numi,Moroccan Mint,herbal,,,low,bag,https://numitea.com
+Harney & Sons,Hot Cinnamon Spice,black,,,,bag,https://www.harney.com
+Harney & Sons,Paris,black,,,,bag,https://www.harney.com
+Rishi Tea,Jasmine Green,green,jasmine,,,loose,https://www.rishi-tea.com
+Rishi Tea,Earl Grey Classic,black,earl grey,,,loose,https://www.rishi-tea.com
+Mariage Freres,Earl Grey French Blue,black,earl grey,,,loose,https://www.mariagefreres.com

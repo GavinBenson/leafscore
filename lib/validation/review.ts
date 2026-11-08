@@ -1,3 +1,5 @@
+import { isTemperatureUnit, parseTemperatureInput, type TemperatureUnit } from '@/lib/units'
+
 export const BREW_METHODS = ['gongfu', 'western', 'cold_brew', 'grandpa'] as const
 export type BrewMethod = (typeof BREW_METHODS)[number]
 
@@ -6,7 +8,10 @@ export const MAX_BREW_TEMP = 100
 export const MAX_STEEP_SECONDS = 86_400
 export const MAX_NOTES_LENGTH = 5_000
 
-export type ReviewField = 'teaId' | 'score' | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'tagIds' | 'photo'
+export const SUB_SCORE_FIELDS = ['aromaScore', 'flavorScore', 'bodyScore', 'aftertasteScore', 'valueScore'] as const
+export type SubScoreField = (typeof SUB_SCORE_FIELDS)[number]
+
+export type ReviewField = 'teaId' | 'score' | SubScoreField | 'brewMethod' | 'brewTemp' | 'steepTime' | 'notes' | 'tagIds' | 'photo'
 export type ReviewFieldErrors = Partial<Record<ReviewField, string>>
 
 export type ReviewInput = {
@@ -18,11 +23,24 @@ export type ReviewInput = {
   notes: string | null
   wouldDrinkAgain: boolean | null
   tagIds: number[]
+  // Optional rubric sub-scores, 0-100. They never change the LeafScore.
+  aromaScore: number | null
+  flavorScore: number | null
+  bodyScore: number | null
+  aftertasteScore: number | null
+  valueScore: number | null
 }
 
 export type ParsedReview =
   | { ok: true; data: ReviewInput }
   | { ok: false; errors: ReviewFieldErrors }
+
+// The brew temperature is typed in the unit the form showed (the hidden
+// 'brewTempUnit' field) and always stored in whole degrees Celsius.
+function readTempUnit(formData: FormData): TemperatureUnit {
+  const raw = text(formData, 'brewTempUnit')
+  return isTemperatureUnit(raw) ? raw : 'c'
+}
 
 function text(formData: FormData, key: string): string {
   const value = formData.get(key)
@@ -63,6 +81,17 @@ export function parseReviewForm(formData: FormData): ParsedReview {
     errors.score = 'Score must be between 0 and 100.'
   }
 
+  const subScores = {} as Record<SubScoreField, number | null>
+  for (const field of SUB_SCORE_FIELDS) {
+    subScores[field] = optionalInRange(
+      text(formData, field),
+      100,
+      'Score must be a whole number between 0 and 100.',
+      field,
+      errors,
+    )
+  }
+
   const rawMethod = text(formData, 'brewMethod')
   let brewMethod: BrewMethod | null = null
   if (rawMethod !== '') {
@@ -73,13 +102,23 @@ export function parseReviewForm(formData: FormData): ParsedReview {
     }
   }
 
-  const brewTemp = optionalInRange(
-    text(formData, 'brewTemp'),
-    MAX_BREW_TEMP,
-    `Temperature must be a whole number from 0 to ${MAX_BREW_TEMP}.`,
-    'brewTemp',
-    errors,
-  )
+  let brewTemp: number | null
+  if (readTempUnit(formData) === 'f') {
+    const rawTemp = text(formData, 'brewTemp')
+    brewTemp = rawTemp === '' ? null : parseTemperatureInput(rawTemp, 'f')
+    if (rawTemp !== '' && (brewTemp === null || brewTemp < 0 || brewTemp > MAX_BREW_TEMP)) {
+      errors.brewTemp = 'Temperature must be a whole number from 32 to 212.'
+      brewTemp = null
+    }
+  } else {
+    brewTemp = optionalInRange(
+      text(formData, 'brewTemp'),
+      MAX_BREW_TEMP,
+      `Temperature must be a whole number from 0 to ${MAX_BREW_TEMP}.`,
+      'brewTemp',
+      errors,
+    )
+  }
   const steepTime = optionalInRange(
     text(formData, 'steepTime'),
     MAX_STEEP_SECONDS,
@@ -122,6 +161,7 @@ export function parseReviewForm(formData: FormData): ParsedReview {
       notes: notes === '' ? null : notes,
       wouldDrinkAgain,
       tagIds,
+      ...subScores,
     },
   }
 }

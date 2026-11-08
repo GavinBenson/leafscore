@@ -121,7 +121,9 @@ describe('account data', () => {
   })
 
   it('tea requests start pending and leave the queue once handled', async () => {
-    const request = await createTeaRequest(db, { userId, name: 'New Tea' })
+    const created = await createTeaRequest(db, { userId, name: 'New Tea' })
+    if (!created.ok) throw new Error('expected request to be created')
+    const request = created.request
     expect((await listPendingRequests(db)).map((row) => row.id)).toEqual([request.id])
 
     expect((await updateRequestStatus(db, request.id, 'approved'))?.status).toBe('approved')
@@ -143,6 +145,7 @@ describe('account data', () => {
 
     it('aggregates only that user, by type, method and flavor', async () => {
       const black = await seedTestTea(db, { name: 'Black', type: 'black' })
+      const green2 = await seedTestTea(db, { name: 'Green 2' })
       const [floral, smoky] = await db
         .insert(schema.flavorTags)
         .values([
@@ -151,7 +154,7 @@ describe('account data', () => {
         ])
         .returning()
       await createReview(db, { userId, teaId, score: 80, brewMethod: 'gongfu', wouldDrinkAgain: true }, [floral.id, smoky.id])
-      await createReview(db, { userId, teaId, score: 60, brewMethod: 'gongfu', wouldDrinkAgain: false }, [floral.id])
+      await createReview(db, { userId, teaId: green2.id, score: 60, brewMethod: 'gongfu', wouldDrinkAgain: false }, [floral.id])
       await createReview(db, { userId, teaId: black.id, score: 91 })
       await createReview(db, { userId: otherUserId, teaId, score: 1, brewMethod: 'western', wouldDrinkAgain: false })
 
@@ -179,8 +182,9 @@ describe('account data', () => {
           { name: 'smoky', category: 'aroma' },
         ])
         .returning()
+      const green2 = await seedTestTea(db, { name: 'Green 2' })
       await createReview(db, { userId, teaId, score: 80 }, [smoky.id, floral.id])
-      await createReview(db, { userId, teaId, score: 70 })
+      await createReview(db, { userId, teaId: green2.id, score: 70 })
       await createReview(db, { userId: otherUserId, teaId, score: 1 })
 
       const rows = await listReviewsForExport(db, userId)

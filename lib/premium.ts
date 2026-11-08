@@ -22,3 +22,26 @@ export function hasPremium(
 export function canAddToWishlist(isPremium: boolean, currentCount: number) {
   return isPremium || currentCount < FREE_WISHLIST_LIMIT
 }
+
+export const FREE_LIST_LIMIT = 3
+export const PREMIUM_LIST_LIMIT = 50
+export const MAX_TEAS_PER_LIST = 200
+export const FREE_SESSION_LIMIT = 3
+
+export function listLimitFor(isPremium: boolean) {
+  return isPremium ? PREMIUM_LIST_LIMIT : FREE_LIST_LIMIT
+}
+
+export function canCreateList(isPremium: boolean, currentCount: number) {
+  return currentCount < listLimitFor(isPremium)
+}
+
+// The cellar is Premium only. The action layer must check this on every write and read.
+export function canUseCellar(isPremium: boolean) {
+  return isPremium
+}
+
+// Free accounts keep a few saved sessions; Premium is unlimited.
+export function canSaveSession(isPremium: boolean, currentCount: number) {
+  return isPremium || currentCount < FREE_SESSION_LIMIT
+}

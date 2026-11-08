@@ -31,3 +31,23 @@ describe('canAddToWishlist', () => {
     expect(canAddToWishlist(true, FREE_WISHLIST_LIMIT * 10)).toBe(true)
   })
 })
+
+describe('list, cellar and session caps', () => {
+  it('limits lists by premium status', async () => {
+    const p = await import('./premium')
+    expect([p.FREE_LIST_LIMIT, p.PREMIUM_LIST_LIMIT, p.MAX_TEAS_PER_LIST, p.FREE_SESSION_LIMIT]).toEqual([3, 50, 200, 3])
+    expect(p.canCreateList(false, 2)).toBe(true)
+    expect(p.canCreateList(false, 3)).toBe(false)
+    expect(p.canCreateList(true, 49)).toBe(true)
+    expect(p.canCreateList(true, 50)).toBe(false)
+  })
+
+  it('gates the cellar and saved sessions', async () => {
+    const p = await import('./premium')
+    expect(p.canUseCellar(true)).toBe(true)
+    expect(p.canUseCellar(false)).toBe(false)
+    expect(p.canSaveSession(false, 2)).toBe(true)
+    expect(p.canSaveSession(false, 3)).toBe(false)
+    expect(p.canSaveSession(true, 10_000)).toBe(true)
+  })
+})
