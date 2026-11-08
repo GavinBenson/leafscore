@@ -8,6 +8,7 @@ import { SignInButton } from "@/components/SignInButton";
 const links = [
   { href: "/", label: "Home" },
   { href: "/browse", label: "Browse" },
+  { href: "/brands", label: "Brands" },
   { href: "/log", label: "Log" },
   { href: "/journal", label: "Journal" },
 ];
@@ -22,7 +23,7 @@ export function NavBar() {
 
   return (
     <>
-      <nav className="topbar">
+      <nav className="topbar" aria-label="Main">
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <Link href="/" className="brand">
             <span className="brand-mark">L</span>
@@ -48,7 +49,11 @@ export function NavBar() {
       </nav>
 
       {/* Sibling of .topbar: its backdrop-filter would trap a fixed child. */}
-      <nav className="tabbar" aria-label="Primary">
+      <nav
+        className="tabbar"
+        aria-label="Primary"
+        style={{ gridTemplateColumns: `repeat(${links.length}, 1fr)` }}
+      >
         {links.map(({ href, label }) => {
           const active = isActive(pathname, href);
           return (

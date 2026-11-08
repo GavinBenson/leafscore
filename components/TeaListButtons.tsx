@@ -17,6 +17,7 @@ export function TeaListButtons({ teaId, initialFavorited, initialWishlisted }: P
   const [wishlisted, setWishlisted] = useState(initialWishlisted)
   const [limitReached, setLimitReached] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function run(action: () => Promise<void>) {
@@ -42,6 +43,7 @@ export function TeaListButtons({ teaId, initialFavorited, initialWishlisted }: P
             run(async () => {
               const result = await toggleFavorite(teaId)
               setFavorited(result.favorited)
+              setNotice(result.error ?? null)
             })
           }
         >
@@ -57,6 +59,7 @@ export function TeaListButtons({ teaId, initialFavorited, initialWishlisted }: P
               const result = await toggleWishlist(teaId)
               setWishlisted(result.wishlisted)
               setLimitReached(result.limitReached)
+              setNotice(result.error ?? null)
             })
           }
         >
@@ -67,6 +70,11 @@ export function TeaListButtons({ teaId, initialFavorited, initialWishlisted }: P
         <p className="field-error" role="alert">
           Free accounts can keep {FREE_WISHLIST_LIMIT} teas on a wishlist.{' '}
           <Link href="/settings/billing">Upgrade to Premium</Link> for unlimited.
+        </p>
+      )}
+      {notice && (
+        <p className="field-error" role="alert">
+          {notice}
         </p>
       )}
       {failed && (

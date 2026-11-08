@@ -1,25 +1,24 @@
 import Link from 'next/link'
-import { sql } from 'drizzle-orm'
 import { db } from '@/db/client'
-import * as schema from '@/db/schema'
+import { getAdminStats } from '@/lib/data/adminStats'
 
 export const metadata = {
   title: 'Admin Dashboard',
 }
 
 export default async function AdminPage() {
-  const [teaCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(schema.teas)
+  const stats = await getAdminStats(db)
 
-  const [reviewCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(schema.reviews)
-
-  const [pendingCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(schema.teaRequests)
-    .where(sql`${schema.teaRequests.status} = 'pending'`)
+  const cards: { label: string; value: number; href?: string }[] = [
+    { label: 'Total Users', value: stats.totalUsers },
+    { label: 'Signups (7 days)', value: stats.signupsLast7Days },
+    { label: 'Reviews (7 days)', value: stats.reviewsLast7Days },
+    { label: 'Premium Users', value: stats.premiumUsers },
+    { label: 'Total Teas', value: stats.totalTeas },
+    { label: 'Total Reviews', value: stats.totalReviews },
+    { label: 'Pending Requests', value: stats.pendingTeaRequests, href: '/admin/requests' },
+    { label: 'Pending Reports', value: stats.pendingReports, href: '/admin/reports' },
+  ]
 
   return (
     <>
@@ -34,32 +33,32 @@ export default async function AdminPage() {
           marginBottom: 32,
         }}
       >
-        <div className="card">
-          <div className="subtle" style={{ marginBottom: 4 }}>
-            Total Teas
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
-            {Number(teaCount.count)}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="subtle" style={{ marginBottom: 4 }}>
-            Total Reviews
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
-            {Number(reviewCount.count)}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="subtle" style={{ marginBottom: 4 }}>
-            Pending Requests
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
-            {Number(pendingCount.count)}
-          </div>
-        </div>
+        {cards.map((card) => {
+          const body = (
+            <>
+              <div className="subtle" style={{ marginBottom: 4 }}>
+                {card.label}
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
+                {card.value}
+              </div>
+            </>
+          )
+          return card.href ? (
+            <Link
+              key={card.label}
+              href={card.href}
+              className="card"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              {body}
+            </Link>
+          ) : (
+            <div key={card.label} className="card">
+              {body}
+            </div>
+          )
+        })}
       </div>
 
       {/* Navigation */}
@@ -69,6 +68,9 @@ export default async function AdminPage() {
         </Link>
         <Link href="/admin/requests" className="btn btn-ghost" style={{ border: '1px solid var(--color-line)' }}>
           Tea Requests
+        </Link>
+        <Link href="/admin/reports" className="btn btn-ghost" style={{ border: '1px solid var(--color-line)' }}>
+          Reports
         </Link>
       </div>
     </>

@@ -1,34 +1,33 @@
+import Link from 'next/link'
 import { db } from '@/db/client'
-import { listPendingRequests } from '@/lib/data/teaRequests'
-import { handleTeaRequest } from '@/actions/teaRequests'
-import { getUserById } from '@/lib/data/users'
+import { listPendingRequestsWithUser } from '@/lib/data/teaRequests'
+import { declineTeaRequest } from '@/actions/teaRequests'
 
 export const metadata = {
   title: 'Tea Requests',
 }
 
-export default async function AdminRequestsPage() {
-  const requests = await listPendingRequests(db)
+const dateFormat = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
 
-  // Fetch user names for each request
-  const requestsWithUsers = await Promise.all(
-    requests.map(async (req) => {
-      const user = await getUserById(db, req.userId)
-      return { ...req, userName: user?.name ?? 'Unknown' }
-    }),
-  )
+export default async function AdminRequestsPage() {
+  const requests = await listPendingRequestsWithUser(db)
 
   return (
     <>
       <h1 className="section-title">Tea Requests</h1>
 
-      {requestsWithUsers.length === 0 ? (
+      {requests.length === 0 ? (
         <div className="empty-state">
           <p>No pending requests.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {requestsWithUsers.map((req) => (
+          {requests.map(({ request: req, user }) => (
             <div
               key={req.id}
               className="card"
@@ -45,35 +44,23 @@ export default async function AdminRequestsPage() {
                 <div className="subtle" style={{ marginTop: 2 }}>
                   {req.brand && <>{req.brand} &middot; </>}
                   {req.type && <>{req.type} &middot; </>}
-                  Requested by {req.userName}
-                  {req.createdAt && (
-                    <> &middot; {new Date(req.createdAt).toLocaleDateString()}</>
-                  )}
+                  Requested by {user.name} &middot; {dateFormat.format(new Date(req.createdAt))}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <form
-                  action={async () => {
-                    'use server'
-                    await handleTeaRequest(req.id, 'approved')
-                  }}
+                <Link
+                  href={`/admin/teas/new?requestId=${req.id}`}
+                  className="btn btn-primary btn-sm"
                 >
-                  <button type="submit" className="btn btn-primary btn-sm">
-                    Approve
-                  </button>
-                </form>
-                <form
-                  action={async () => {
-                    'use server'
-                    await handleTeaRequest(req.id, 'rejected')
-                  }}
-                >
+                  Approve
+                </Link>
+                <form action={declineTeaRequest.bind(null, req.id)}>
                   <button
                     type="submit"
                     className="btn btn-ghost btn-sm"
                     style={{ border: '1px solid var(--color-line)' }}
                   >
-                    Reject
+                    Decline
                   </button>
                 </form>
               </div>

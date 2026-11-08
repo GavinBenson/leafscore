@@ -37,19 +37,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: '/signin',
   },
   events: {
-    // Keep name/avatar in sync with the Google profile on every sign-in. `user`
-    // here is the database row, so the fresh values are on `profile`.
+    // Keep the avatar in sync with the Google profile on every sign-in. The name
+    // is not synced: users can edit it in Settings and a sync would overwrite
+    // that. `user` here is the database row, so fresh values are on `profile`.
     async signIn({ user, account, profile }) {
       const userId = Number(user.id)
       if (account?.type === 'oidc' && Number.isSafeInteger(userId)) {
         await updateUserProfile(db, userId, {
-          name: profile?.name ?? undefined,
           avatarUrl: typeof profile?.picture === 'string' ? profile.picture : undefined,
         })
       }
     },
   },
   callbacks: {
+    // Banned users can't start a session (Google or magic link). Sessions that
+    // already exist are cut off in the session callback below.
+    async signIn({ user }) {
+      const email = user.email
+      if (!email) return true
+      const existing = await getUserByEmail(db, email)
+      return !existing?.bannedAt
+    },
     async session({ session, token }) {
       // Look up by id so a changed email can't detach a session from its user.
       // Cookies from before the adapter existed hold Google's id in `sub`, which
@@ -65,12 +73,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const result: Session = {
         expires: session.expires,
         user: {
-          name: session.user.name,
+          name: dbUser.name || session.user.name,
           email: session.user.email,
           image: session.user.image,
           id: String(dbUser.id),
           isPremium: hasPremium(dbUser),
           isAdmin: dbUser.isAdmin ?? false,
+          isBanned: dbUser.bannedAt != null,
         },
       }
       return result

@@ -24,13 +24,15 @@ Open <http://localhost:3000>.
 
 | Variable | Needed for | Where it comes from |
 |---|---|---|
-| `DATABASE_URL` | Everything | Neon connection string |
+| `DATABASE_URL` | Everything | Neon connection string (use the pooled `-pooler` host at runtime) |
 | `AUTH_SECRET` | Sign-in | `npx auth secret` |
 | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google sign-in | Google Cloud OAuth client |
 | `AUTH_RESEND_KEY`, `AUTH_RESEND_FROM` | Magic-link email | Resend API key and a verified sender |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Premium | Stripe dashboard, or `stripe listen` locally |
 | `STRIPE_MONTHLY_PRICE_ID`, `STRIPE_YEARLY_PRICE_ID` | Premium | Stripe recurring prices |
 | `BLOB_READ_WRITE_TOKEN` | Review photos | Vercel Blob store |
+| `CRON_SECRET` | Weekly digest cron | Any long random string. Vercel Cron sends it as `Authorization: Bearer <secret>`. Unset means `/api/cron/digest` returns 500 and never runs |
+| `STRIPE_TRIAL_DAYS` | Optional free trial | Integer 0-30, default 0 (no trial) |
 | `NEXT_PUBLIC_APP_URL` | Stripe return URLs, sitemap | Your site's URL, no trailing slash |
 
 Features whose variables are missing fail when used, not at startup. `DATABASE_URL` is the exception: the app won't start without it.
@@ -113,8 +115,39 @@ Conventions are in [`CLAUDE.md`](./CLAUDE.md). This version of Next.js has break
 
 ## Deploying
 
-The site deploys to Vercel. For a release:
+The site deploys to Vercel. Migrations do not run automatically, so order matters.
 
-1. Set the environment variables above in the Vercel project.
-2. Run `npm run db:migrate` against the production database.
-3. Merge to `master`.
+### Release steps
+
+1. Set the environment variables in the Vercel project (checklist below).
+2. Run `npm run db:migrate` against the production database **before** the new code goes live. The old code keeps serving while the schema changes, so every migration must be safe for the old code too.
+3. Merge to `master` (Vercel deploys).
+4. First launch only: load catalogue data (see below).
+
+### Expand/contract rule of thumb
+
+- **Expand** first, in one release: add tables, add nullable columns or columns with defaults, add indexes. Old code ignores them.
+- **Deploy** code that uses the new shape.
+- **Contract** in a later release, once nothing reads the old shape: drop columns or tables, tighten `NOT NULL`, rename (add new, backfill, switch, drop old).
+- Never drop or rename something the currently deployed code still reads in the same release as the code change.
+
+### Seeding and importing the catalogue
+
+- `npm run db:seed` loads a small demo set. `db/seed.ts` and `npm run db:import -- --apply` refuse to run against any database host other than localhost, 127.0.0.1, ::1 or `db.localtest.me`. To run them against a hosted database on purpose, set `ALLOW_PROD_SEED=1` (for example `ALLOW_PROD_SEED=1 npm run db:import -- db/data/teas.csv --apply`).
+- `npm run db:import -- [file.csv]` validates a CSV (`brand,name,type,subtype,origin,caffeine_level,leaf_style,website`), dedupes by brand and name (case-insensitive, against the database and within the file) and prints a summary. It is a dry run by default; add `--apply` to write. See `db/data/teas.sample.csv`, which is a small starter set that needs human review. The 300-500 tea launch target needs curated or licensed data.
+
+### Environment variable checklist
+
+- [ ] `DATABASE_URL` (Neon, pooled connection string)
+- [ ] `AUTH_SECRET`
+- [ ] `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`
+- [ ] `AUTH_RESEND_KEY`, `AUTH_RESEND_FROM` (verified domain)
+- [ ] `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_MONTHLY_PRICE_ID`, `STRIPE_YEARLY_PRICE_ID`
+- [ ] `BLOB_READ_WRITE_TOKEN`
+- [ ] `CRON_SECRET` (weekly digest; `vercel.json` schedules `/api/cron/digest` Mondays 15:00 UTC)
+- [ ] `NEXT_PUBLIC_APP_URL` (no trailing slash)
+- [ ] Stripe webhook endpoint configured with the four events listed above
+
+### CI requirements
+
+CI (`.github/workflows/ci.yml`) starts a Postgres 16 service container plus a `local-neon-http-proxy` container (the app's Neon HTTP driver cannot talk to plain Postgres), applies migrations, seeds, then builds with `DATABASE_URL=postgres://postgres:postgres@db.localtest.me:5432/main`. CI also fails when `db/schema.ts` has no matching migration (`drizzle-kit generate` produces new files) and on high-severity production dependency vulnerabilities. Playwright smoke tests are not wired up yet.

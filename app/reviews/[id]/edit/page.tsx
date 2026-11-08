@@ -6,6 +6,7 @@ import { getReview } from '@/lib/data/reviews'
 import { getTea } from '@/lib/data/teas'
 import { getCurrentUser } from '@/lib/session'
 import { ReviewForm } from '@/components/ReviewForm'
+import { getViewerPreferences } from '@/lib/viewerPreferences'
 
 export const metadata = {
   title: 'Edit Review',
@@ -33,6 +34,7 @@ export default async function EditReviewPage({
     listFlavorTags(db),
   ])
   if (!teaResult) notFound()
+  const prefs = await getViewerPreferences(db, user.id)
 
   return (
     <div>
@@ -41,6 +43,7 @@ export default async function EditReviewPage({
         <ReviewForm
           tea={{ id: teaResult.tea.id, name: teaResult.tea.name }}
           flavorTags={flavorTags}
+          temperatureUnit={prefs.tempUnit}
           review={{
             id: review.id,
             score: review.score,
@@ -51,6 +54,11 @@ export default async function EditReviewPage({
             wouldDrinkAgain: review.wouldDrinkAgain,
             tagIds: review.tags.map((tag) => tag.id),
             photoUrl: review.photoUrl,
+            aromaScore: review.aromaScore,
+            flavorScore: review.flavorScore,
+            bodyScore: review.bodyScore,
+            aftertasteScore: review.aftertasteScore,
+            valueScore: review.valueScore,
           }}
         />
       </div>

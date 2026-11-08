@@ -3,6 +3,18 @@ import Link from 'next/link'
 import type { Review } from '@/db/schema'
 import { LeafScoreBadge } from '@/components/LeafScoreBadge'
 import { ReviewActions } from '@/components/ReviewActions'
+import { ReportButton } from '@/components/ReportButton'
+import { HelpfulButton } from '@/components/HelpfulButton'
+import { SubScores } from '@/components/SubScores'
+import { formatTemperature, type TemperatureUnit } from '@/lib/units'
+
+// Fixed locale and zone so server and browser render the same text.
+const dateFormat = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
 
 type ReviewCardProps = {
   review: Review & {
@@ -11,15 +23,30 @@ type ReviewCardProps = {
   // In a journal the author is always the reader, so headline the tea instead.
   tea?: { id: number; name: string }
   canManage?: boolean
+  // Where deleting this review should land (same-site path); default is the tea page.
+  returnTo?: string
+  tags?: string[]
+  // Offer "Report" on someone else's review. returnTo is where sign-in sends them back.
+  report?: { signedIn: boolean; returnTo: string }
+  // Helpful vote (PBI 49); only shown on someone else's review.
+  helpful?: { count: number; voted: boolean; signedIn: boolean; returnTo: string }
+  // Display unit for the brew temperature (stored values are Celsius). Default Celsius.
+  temperatureUnit?: TemperatureUnit
 }
 
-export function ReviewCard({ review, tea, canManage }: ReviewCardProps) {
+export function ReviewCard({ review, tea, canManage, returnTo, tags, report, helpful, temperatureUnit = 'c' }: ReviewCardProps) {
   const dateStr = review.createdAt
-    ? new Date(review.createdAt).toLocaleDateString()
+    ? dateFormat.format(new Date(review.createdAt))
     : ''
 
   return (
     <div className="card">
+      {review.hidden && (
+        <p className="form-error" role="note">
+          Hidden by moderators. Only you can see this review, and it does not count toward the tea&apos;s score.
+        </p>
+      )}
+
       {/* Header */}
       <div
         style={{
@@ -59,7 +86,7 @@ export function ReviewCard({ review, tea, canManage }: ReviewCardProps) {
       </div>
 
       {/* Brew details */}
-      {(review.brewMethod || review.brewTemp || review.steepTime) && (
+      {(review.brewMethod || review.brewTemp != null || review.steepTime != null) && (
         <div
           style={{
             display: 'flex',
@@ -69,13 +96,29 @@ export function ReviewCard({ review, tea, canManage }: ReviewCardProps) {
           }}
         >
           {review.brewMethod && (
-            <span className="tag">{review.brewMethod.replace('_', ' ')}</span>
+            <span className="tag">{review.brewMethod.replace(/_/g, ' ')}</span>
           )}
-          {review.brewTemp && <span className="tag">{review.brewTemp}&deg;C</span>}
-          {review.steepTime && (
+          {review.brewTemp != null && <span className="tag">{formatTemperature(review.brewTemp, temperatureUnit)}</span>}
+          {review.steepTime != null && (
             <span className="tag">{review.steepTime}s steep</span>
           )}
         </div>
+      )}
+
+      <SubScores review={review} />
+
+      {/* Flavor tags */}
+      {tags && tags.length > 0 && (
+        <ul
+          aria-label="Flavor tags"
+          style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '0 0 8px', padding: 0, listStyle: 'none' }}
+        >
+          {tags.map((name) => (
+            <li key={name} className="tag">
+              {name}
+            </li>
+          ))}
+        </ul>
       )}
 
       {/* Notes */}
@@ -112,7 +155,17 @@ export function ReviewCard({ review, tea, canManage }: ReviewCardProps) {
         </div>
       )}
 
-      {canManage && <ReviewActions reviewId={review.id} teaId={review.teaId} />}
+      {!canManage && helpful && (<div style={{ marginTop: 8 }}><HelpfulButton reviewId={review.id} count={helpful.count} helpful={helpful.voted} signedIn={helpful.signedIn} returnTo={helpful.returnTo} /></div>)}
+      {canManage && <ReviewActions reviewId={review.id} teaId={review.teaId} returnTo={returnTo} />}
+      {!canManage && report && (
+        <div className="review-actions">
+          <ReportButton
+            reviewId={review.id}
+            signedInAs={report.signedIn}
+            returnTo={report.returnTo}
+          />
+        </div>
+      )}
     </div>
   )
 }

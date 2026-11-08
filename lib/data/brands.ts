@@ -25,9 +25,10 @@ export async function getBrandWithTeas(db: Db, brandId: number) {
     .select()
     .from(schema.teas)
     .where(eq(schema.teas.brandId, brandId))
+    .orderBy(asc(schema.teas.name), asc(schema.teas.id))
 
   return {
     brand,
-    teas: brandTeas,
+    teas: brandTeas.map((tea) => ({ ...tea, brand })),
   }
 }

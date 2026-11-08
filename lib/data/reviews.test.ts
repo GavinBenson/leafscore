@@ -88,17 +88,18 @@ describe('reviews', () => {
   })
 
   it('lists by tea with the author, and by user with the tea and a limit', async () => {
+    const second = await seedTestTea(db, { name: 'Second Tea' })
     await createReview(db, { userId, teaId, score: 80 })
-    await createReview(db, { userId, teaId, score: 70 })
+    await createReview(db, { userId, teaId: second.id, score: 70 })
     await createReview(db, { userId: otherUserId, teaId, score: 60 })
 
     const forTea = await listReviewsForTea(db, teaId)
-    expect(forTea).toHaveLength(3)
+    expect(forTea).toHaveLength(2)
     expect(forTea[0].user.name).toBe('Test User')
 
     const forUser = await listReviewsForUser(db, userId, { limit: 1 })
     expect(forUser).toHaveLength(1)
-    expect(forUser[0].tea.id).toBe(teaId)
+    expect(forUser[0].tea.id).toBe(second.id)
   })
 
   describe('findRecentDuplicateReview', () => {
@@ -106,11 +107,12 @@ describe('reviews', () => {
       findRecentDuplicateReview(db, { userId, teaId, score: 80, notes: 'same', ...overrides })
 
     it('matches an identical recent review, including null notes', async () => {
+      const second = await seedTestTea(db, { name: 'Second Tea' })
       await createReview(db, { userId, teaId, score: 80, notes: 'same' })
-      await createReview(db, { userId, teaId, score: 81, notes: null })
+      await createReview(db, { userId, teaId: second.id, score: 81, notes: null })
 
       expect(await lookup()).not.toBeNull()
-      expect(await lookup({ score: 81, notes: null })).not.toBeNull()
+      expect(await lookup({ teaId: second.id, score: 81, notes: null })).not.toBeNull()
     })
 
     it('does not match different notes, score or user', async () => {

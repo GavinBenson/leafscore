@@ -15,9 +15,9 @@ describe('catalog', () => {
 
   describe('teas', () => {
     beforeEach(async () => {
-      await seedTestTea(db, { name: 'Assam', type: 'black', leafScore: 50 })
-      await seedTestTea(db, { name: 'Sencha', type: 'green', leafScore: 90 })
-      await seedTestTea(db, { name: '100% Matcha_Grade', type: 'green', leafScore: 70 })
+      await seedTestTea(db, { name: 'Assam', type: 'black', leafScore: 50, reviewCount: 3 })
+      await seedTestTea(db, { name: 'Sencha', type: 'green', leafScore: 90, reviewCount: 3 })
+      await seedTestTea(db, { name: '100% Matcha_Grade', type: 'green', leafScore: 70, reviewCount: 3 })
     })
 
     const names = (rows: { name: string }[]) => rows.map((row) => row.name)

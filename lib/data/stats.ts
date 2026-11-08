@@ -7,6 +7,10 @@ type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 const avgScore = sql<string | null>`avg(${schema.reviews.score})`
 const reviewCount = sql<string>`count(*)`
 
+// Moderator-hidden reviews don't count toward a user's stats.
+const visible = (userId: number) =>
+  and(eq(schema.reviews.userId, userId), eq(schema.reviews.hidden, false))
+
 const round = (value: string | null) => (value === null ? null : Math.round(Number(value)))
 
 export async function getReviewStats(db: Db, userId: number) {
@@ -18,20 +22,20 @@ export async function getReviewStats(db: Db, userId: number) {
       answeredAgain: sql<string>`count(${schema.reviews.wouldDrinkAgain})`,
     })
     .from(schema.reviews)
-    .where(eq(schema.reviews.userId, userId))
+    .where(visible(userId))
 
   const byType = await db
     .select({ type: schema.teas.type, count: reviewCount, avgScore })
     .from(schema.reviews)
     .innerJoin(schema.teas, eq(schema.reviews.teaId, schema.teas.id))
-    .where(eq(schema.reviews.userId, userId))
+    .where(visible(userId))
     .groupBy(schema.teas.type)
     .orderBy(desc(reviewCount), asc(schema.teas.type))
 
   const byMethod = await db
     .select({ method: schema.reviews.brewMethod, count: reviewCount, avgScore })
     .from(schema.reviews)
-    .where(and(eq(schema.reviews.userId, userId), isNotNull(schema.reviews.brewMethod)))
+    .where(and(visible(userId), isNotNull(schema.reviews.brewMethod)))
     .groupBy(schema.reviews.brewMethod)
     .orderBy(desc(reviewCount), asc(schema.reviews.brewMethod))
 
@@ -40,7 +44,7 @@ export async function getReviewStats(db: Db, userId: number) {
     .from(schema.reviewTags)
     .innerJoin(schema.reviews, eq(schema.reviewTags.reviewId, schema.reviews.id))
     .innerJoin(schema.flavorTags, eq(schema.reviewTags.flavorTagId, schema.flavorTags.id))
-    .where(eq(schema.reviews.userId, userId))
+    .where(visible(userId))
     .groupBy(schema.flavorTags.name)
     .orderBy(desc(reviewCount), asc(schema.flavorTags.name))
     .limit(5)
@@ -71,6 +75,7 @@ export async function listReviewsForExport(db: Db, userId: number) {
       wouldDrinkAgain: schema.reviews.wouldDrinkAgain,
       flavors: sql<string | null>`string_agg(${schema.flavorTags.name}, '; ' order by ${schema.flavorTags.name})`,
       notes: schema.reviews.notes,
+      hidden: schema.reviews.hidden,
     })
     .from(schema.reviews)
     .innerJoin(schema.teas, eq(schema.reviews.teaId, schema.teas.id))

@@ -8,11 +8,12 @@ export function SubscribeButton({
   plan: 'monthly' | 'yearly'
 }) {
   const [loading, setLoading] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleClick() {
     setLoading(true)
-    setFailed(false)
+    setError(null)
+    let message = "We couldn't start checkout. Try again in a moment."
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -20,15 +21,17 @@ export function SubscribeButton({
         body: JSON.stringify({ plan }),
       })
       const data = await res.json()
-      if (res.ok && data.url) {
+      // A 409 (already subscribed) also carries the billing url to go to.
+      if (data.url && (res.ok || res.status === 409)) {
         window.location.href = data.url
         return
       }
+      if (res.status === 429 && typeof data.error === 'string') message = data.error
     } catch {
       // Falls through to the error message below.
     }
     setLoading(false)
-    setFailed(true)
+    setError(message)
   }
 
   return (
@@ -41,9 +44,9 @@ export function SubscribeButton({
       >
         {loading ? 'Redirecting...' : 'Subscribe'}
       </button>
-      {failed && (
+      {error && (
         <p className="field-error" role="alert">
-          We couldn&apos;t start checkout. Try again in a moment.
+          {error}
         </p>
       )}
     </>

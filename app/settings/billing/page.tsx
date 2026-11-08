@@ -3,7 +3,9 @@ import { getCurrentUser } from '@/lib/session'
 import { signInPath } from '@/lib/authRedirect'
 import { db } from '@/db/client'
 import { getUserById } from '@/lib/data/users'
-import { PLANS } from '@/lib/stripe'
+import { PLANS, trialDays } from '@/lib/stripe'
+import { savingsPercent, subscriptionState, trialLabel } from '@/lib/billing'
+import { ActivationPoller } from '@/components/ActivationPoller'
 import { PremiumFeatureList } from '@/components/PremiumUpsell'
 import { SubscribeButton } from '@/components/SubscribeButton'
 
@@ -14,13 +16,19 @@ export const metadata = {
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string }>
+  searchParams: Promise<{ success?: string; from?: string; error?: string }>
 }) {
   const user = await getCurrentUser()
   if (!user) redirect(signInPath('/settings/billing'))
 
-  const { success } = await searchParams
+  const { success, from, error } = await searchParams
   const account = await getUserById(db, user.id)
+  const subscription = subscriptionState({
+    isPremium: user.isPremium,
+    cancelAtPeriodEnd: account?.cancelAtPeriodEnd ?? false,
+    premiumExpiresAt: account?.premiumExpiresAt ?? null,
+  })
+  const savings = savingsPercent(PLANS.monthly.price, PLANS.yearly.price)
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -32,7 +40,23 @@ export default async function BillingPage({
         </p>
       )}
 
-      {success === 'true' && (
+      {error && (
+        <p className="form-error" role="alert">
+          {error === 'rate'
+            ? 'Too many billing requests. Please try again in a little while.'
+            : "We couldn't open the billing portal. Please try again in a moment."}
+        </p>
+      )}
+
+      {from === 'export' && !user.isPremium && (
+        <div className="card" role="note" style={{ marginBottom: 16 }}>
+          CSV export is a Premium feature. Subscribe below to export your full tasting journal.
+        </div>
+      )}
+
+      {success === 'true' && !user.isPremium && <ActivationPoller />}
+
+      {success === 'true' && user.isPremium && (
         <div
           className="card"
           style={{
@@ -42,7 +66,7 @@ export default async function BillingPage({
           }}
         >
           <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
-            Welcome to Premium! Your subscription is now active.
+            Welcome to Premium! Your subscription is active.
           </div>
         </div>
       )}
@@ -64,9 +88,9 @@ export default async function BillingPage({
         ) : (
           <span className="tag">Free</span>
         )}
-        {user.isPremium && account?.premiumExpiresAt && (
+        {subscription.kind !== 'none' && (
           <p className="subtle" style={{ margin: '8px 0 0' }}>
-            Current period ends {account.premiumExpiresAt.toLocaleDateString('en-US', { dateStyle: 'long', timeZone: 'UTC' })}
+            {subscription.label}
           </p>
         )}
       </div>
@@ -80,6 +104,9 @@ export default async function BillingPage({
       </div>
 
       {/* Plan cards */}
+      {!user.isPremium && trialLabel(trialDays()) && (
+        <p style={{ marginBottom: 12 }}>{trialLabel(trialDays())}</p>
+      )}
       {!user.isPremium && (
         <div
           style={{
@@ -120,7 +147,7 @@ export default async function BillingPage({
                 className="tag tag-accent"
                 style={{ fontSize: 11 }}
               >
-                Save 33%
+                Save {savings}%
               </span>
             </div>
             <div>

@@ -5,9 +5,50 @@ on:
   push:
     branches: [master]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    # Every page that reads the database is dynamic, so `next build` needs no
+    # database. The database is still needed for the migrate and seed steps: the
+    # app and db/migrate.ts use the Neon serverless driver (HTTP/WebSocket),
+    # which cannot talk to plain Postgres, so a local-neon-http-proxy container
+    # sits in front of Postgres. db.localtest.me resolves to 127.0.0.1; see
+    # db/neonLocal.ts. The proxy image tag (:main) is unpinned and has not been
+    # verified; pin it to a digest when convenient.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: main
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d main"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      neon-proxy:
+        image: ghcr.io/timowilhelm/local-neon-http-proxy:main
+        env:
+          PG_CONNECTION_STRING: postgres://postgres:postgres@postgres:5432/main
+        ports:
+          - 4444:4444
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@db.localtest.me:5432/main
+      AUTH_SECRET: ci-dummy-secret-not-used-in-production
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,3 +59,32 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint -- --max-warnings 0
       - run: npm test
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Check migrations match db/schema.ts
+        run: |
+          npx drizzle-kit check
+          npx drizzle-kit generate
+          if [ -n "$(git status --porcelain -- drizzle)" ]; then
+            echo "::error::db/schema.ts has changes with no migration. Run 'npm run db:generate' and commit drizzle/."
+            git status --porcelain -- drizzle
+            exit 1
+          fi
+
+      # Runs all pending migrations in one transaction (db/migrate.ts).
+      - name: Apply migrations to the CI database
+        run: npm run db:migrate:ci
+      - name: Seed the CI database
+        run: npm run db:seed:ci
+
+      # Optional: speeds up repeat builds; safe to delete this step.
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!node_modules/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Build
+        run: npm run build
